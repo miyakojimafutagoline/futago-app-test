@@ -794,7 +794,7 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 //const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
 
 /*テスト用*/
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwdwU_Tc1gjiyPE8_OeEp0LcPONu6AzyL9mbup6IlsHzd8_kUugETC5vihVbB9MEm9KrA/exec";   
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzSeqJ20Lc3M27bGlYj07PomPMy2od1wJBjSX0ype1UAhvSVdIGu4lZ9wK0ajFBz-hCcw/exec";   
    
 // ★ NS-04対策：共有秘密キー
 // GAS（コードds）の APP_SECRET と必ず同じ値にすること
@@ -814,7 +814,12 @@ async function callGAS(action, ...args) {
     body: JSON.stringify({ action, args, secret: APP_SECRET })
   });
   if (!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
+  const data = await res.json();
+  // ★ NS-01修正: GASがHTTP 200でもerrorフィールドを返す場合がある
+  // 例: シートが見つからない・認証エラー・Unknown action など
+  // errorをthrowすることで呼び出し元の.catch()/_onGasError()が正しく動く
+  if (data && data.error) throw new Error(data.error);
+  return data;
 }
 
 let lastScrollPos = 0;
@@ -1091,103 +1096,105 @@ async function _initApp(){
     "こんにちは " + userName + " さん👋";
   document.getElementById("app").style.display = "block";
 
-  // ★ 起動案内を非表示（アプリが正常に起動できたタイミングで消す）
+  // ★ 起動案内を非表示
   const notice = document.getElementById("loadingNotice");
   if (notice) notice.style.display = "none";
 
   // placeTabを初期表示
   document.getElementById("placeTab").style.display = "block";
 
-
-  // 閲覧登録（結果不要）
+  // 閲覧登録（結果不要・独立して実行）
   callGAS("registerView", userId).catch(e => console.error("registerView:", e));
 
-  // 今日の年齢帯・投票先を復元
-  callGAS("getTodayAge", userId)
-    .then(data => {
-      if (data && data.age) {
-        const sel = document.getElementById("ageSelect");
-        if (sel) sel.value = data.age;
+  // ★ NS-02修正: getInitPayloadで一括取得（旧設計: 6回のGAS呼び出し → 1回に削減）
+  //   取得内容: todayCounts / allAges / goOutTotal / goOutAgeTotal /
+  //             wardList / todayAge / viewCount / moodCounts /
+  //             yesterdayVote / alreadyReported
+  try {
+    const init = await callGAS("getInitPayload", userId);
+
+    // ① 年齢帯・投票先を復元
+    const todayAge = init.todayAge;
+    if (todayAge && todayAge.age) {
+      const sel = document.getElementById("ageSelect");
+      if (sel) sel.value = todayAge.age;
+    }
+    if (todayAge && todayAge.place) {
+      if (todayAge.place === "引きこもり") {
+        _setTravelChoice("stay");
+      } else {
+        _setTravelChoice("go");
+        _todayPlace = todayAge.place;
+        _todayWard  = todayAge.ward || "";
       }
-      if (data && data.place) {
-        if (data.place === "引きこもり") {
-          _setTravelChoice("stay");
-        } else {
-          _setTravelChoice("go");
-          _todayPlace = data.place;
-          _todayWard  = data.ward || "";
-        }
-      }
-      if (data && !data.place && data.ward) {
-        _todayWard = data.ward;
-      }
-      _todayAgeReady = true;
-      _tryAutoLoadPlaces();
-    })
-    .catch(err => { console.error("getTodayAge:", err); _todayAgeReady = true; });
+    }
+    if (todayAge && !todayAge.place && todayAge.ward) {
+      _todayWard = todayAge.ward;
+    }
+    _todayAgeReady = true;
 
-  loadMoodCounts();
-  initFeedbackCard();
+    // ② ひきこもり・出かけるカウント表示
+    const { todayCounts, allAges, goOutTotal, goOutAgeTotal } = init;
+    const stayHome = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
+    _updateTravelCounts(stayHome, goOutTotal || 0);
+    _renderStayHomeAge(allAges, stayHome);
+    _renderGoOutAgeTotal(goOutAgeTotal || null, goOutTotal || 0);
 
-  // ひきこもり・出かける人数＋年齢帯を取得
-  callGAS("getTodayCounts")
-    .then(counts => {
-      const stayHome = (counts["引きこもり"] && counts["引きこもり"]["なし"]) || 0;
-      const goOut    = (counts["出かける"]   && counts["出かける"]["未定"])   || 0;
-      _updateTravelCounts(stayHome, goOut);
-
-      callGAS("getAllAgeBreakdowns")
-        .then(allAges => {
-          setTimeout(() => {
-            _renderStayHomeAge(allAges, stayHome);
-            let goOutTotal4 = 0;
-            const goOutAgeTotal4 = { "🍼0-1": 0, "🐤2-3": 0, "📛未就学": 0, "🏫小学生以上": 0 };
-            for (const place in allAges) {
-              if (place === "引きこもり") continue;
-              for (const t in allAges[place]) {
-                for (const cat in allAges[place][t]) {
-                  if (goOutAgeTotal4[cat] !== undefined) {
-                    goOutAgeTotal4[cat] += allAges[place][t][cat];
-                  }
-                }
-              }
-            }
-            for (const place in counts) {
-              if (place === "引きこもり") continue;
-              const times = counts[place];
-              for (const t in times) goOutTotal4 += times[t];
-            }
-            _updateTravelCounts(stayHome, goOutTotal4);
-            _renderGoOutAgeTotal(goOutAgeTotal4, goOutTotal4);
-          }, 800);
-        })
-        .catch(err => console.error("getAllAgeBreakdowns:", err));
-    })
-    .catch(err => console.error("getTodayCounts:", err));
-
-  // 閲覧数
-  callGAS("getTodayViewCount")
-    .then(n => {
-      document.getElementById("viewCount").innerText =
-        "👀 今日このページを見たママパパ " + n + "人";
-    })
-    .catch(err => console.error("getTodayViewCount:", err));
-
-  // 区一覧
-  callGAS("getWardList")
-    .then(wards => {
-      const sel = document.getElementById("wardSelect");
-      sel.innerHTML = '<option value="">区を選択してください</option>';
-      wards.forEach(w => {
-        sel.innerHTML += `<option value="${w}">${w}</option>`;
-      });
-      _wardListReady = true;
-      _tryAutoLoadPlaces();
-    })
-    .catch(err => {
-      showToast("⚠️ 区一覧の読み込みに失敗しました。ページを再読み込みしてください。", "error", 4000);
-      console.error("getWardList:", err);
+    // ③ 区プルダウン
+    const sel = document.getElementById("wardSelect");
+    sel.innerHTML = '<option value="">区を選択してください</option>';
+    (init.wardList || []).forEach(w => {
+      const opt = document.createElement("option");
+      opt.value = w;
+      opt.textContent = w;
+      sel.appendChild(opt);
     });
+    _wardListReady = true;
+
+    // ④ 閲覧数
+    document.getElementById("viewCount").innerText =
+      "👀 今日このページを見たママパパ " + (init.viewCount || 0) + "人";
+
+    // ⑤ 気分タブ
+    renderMood(init.moodCounts);
+
+    // ⑥ フィードバックカード
+    const vote = init.yesterdayVote;
+    if (vote && !init.alreadyReported) {
+      _feedbackPlace = vote.place;
+      _feedbackWard  = vote.ward;
+      const feedbackMsg = vote.place === "出かける"
+        ? "🚶 昨日お出かけの予定でしたが、多胎家庭と会えましたか？"
+        : "📍 昨日「" + vote.place + "」に行く予定でしたが、多胎家庭と会えましたか？";
+      document.getElementById("feedbackText").innerText = feedbackMsg;
+      document.getElementById("feedbackCard").style.display = "block";
+    }
+
+    // ⑦ 区の自動選択（wardList・todayAge両方揃ったので実行）
+    _tryAutoLoadPlaces();
+
+  } catch (err) {
+    console.error("getInitPayload:", err);
+    // getInitPayload失敗時のフォールバック：区一覧だけ個別取得してアプリを継続
+    _todayAgeReady = true;
+    callGAS("getWardList")
+      .then(wards => {
+        const sel = document.getElementById("wardSelect");
+        sel.innerHTML = '<option value="">区を選択してください</option>';
+        (wards || []).forEach(w => {
+          const opt = document.createElement("option");
+          opt.value = w;
+          opt.textContent = w;
+          sel.appendChild(opt);
+        });
+        _wardListReady = true;
+        _tryAutoLoadPlaces();
+      })
+      .catch(e => {
+        showToast("⚠️ 初期データの読み込みに失敗しました。ページを再読み込みしてください。", "error", 4000);
+        console.error("getWardList fallback:", e);
+      });
+  }
 }// ← _initApp() の閉じ
 
 async function refreshFavoriteShortcuts(){
