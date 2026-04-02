@@ -790,8 +790,12 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
 <script>
 // ★ GASのエンドポイントURL（デプロイ後に更新不要）
-const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
+/* 本番用 */
+//const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
 
+/*テスト用*/
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzSeqJ20Lc3M27bGlYj07PomPMy2od1wJBjSX0ype1UAhvSVdIGu4lZ9wK0ajFBz-hCcw/exec";   
+   
 // ★ NS-04対策：共有秘密キー
 // GAS（コードds）の APP_SECRET と必ず同じ値にすること
 // この値は外部に漏らさないでください
@@ -1039,7 +1043,11 @@ function showToast(msg, type, duration) {
 
 /* 初期化 */
 function init(){
-  const LIFF_ID = "2009349674-TujIMf4h";
+   /*本番*/
+  //const LIFF_ID = "2009349674-TujIMf4h";
+   /*test */
+  const LIFF_ID = "2009673694-tNmRTi2h";
+
 
   liff.init({
     liffId: LIFF_ID,
