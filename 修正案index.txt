@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+<style>
+/* ============================
+   ふたごアプリ 3色テーマ（白・オレンジ・薄グレー）
+   ============================ */
+
+/* 全体設定 */
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  padding:3vw;
+  background:#FFFFFF; /* 白 */
+  font-size:3.5vw;
+  line-height:1.4;
+  color:#333; /* 黒より優しい濃グレー */
+}
+
+/* 見出し（h1 は後で装飾するので色は触らない） */
+h1{ font-size:6vw; margin-bottom:3vw; }
+h2{ font-size:4.8vw; margin-top:5vw; margin-bottom:3vw; }
+h3{ font-size:4vw; margin-bottom:2vw; }
+
+/* ★ タブ */
+.tab-container{
+  display:flex;
+  margin:4vw 0;
+  border-bottom:2px solid #E5E5E5; /* 薄グレー */
+}
+.tab-content{
+  display: none;
+  overflow: hidden;
+}
+.tab-button{
+  flex:1;
+  padding:2.5vw 0;
+  font-size:4vw;
+  background:#F5F5F5; /* 薄グレー */
+  border:none;
+  cursor:pointer;
+  color:#333;
+}
+.tab-button.active{
+  background:#FFFFFF;
+  border-bottom:3px solid #FF8A00; /* オレンジ */
+  font-weight:bold;
+  color:#FF8A00;
+}
+
+/* 気分カード（超コンパクト） */
+.moodCard{
+  background:none;
+  padding:0;
+  margin-bottom:2vw;
+  border-radius:0;
+  box-shadow:none;
+  font-size:3.5vw;
+}
+.moodCard button{
+  margin-right:2vw;
+  flex-shrink:0;
+  font-size:3vw;
+  padding:1.5vw 2vw;
+  border-radius:2vw;
+  background:#FF8A00; /* オレンジ */
+  color:white;
+  border:none;
+}
+
+/* 投票行 */
+.voteRow{
+  display:flex;
+  align-items:center;
+  margin-bottom:2vw;
+}
+.voteRow button{
+  margin-right:2.5vw;
+}
+.voteText{
+  font-size:3.5vw;
+  line-height:1.3;
+  white-space:nowrap;
+}
+
+/* サマリー施設カード */
+.placeSummary{
+  display:flex;
+  align-items:center;
+  background:#FFF3E0;
+  padding:3vw;
+  margin-bottom:3vw;
+  border-radius:3vw;
+  border:1px solid #E5E5E5;
+  box-shadow:0 1vw 2vw rgba(0,0,0,0.05);
+}
+.placeSummary button{
+  margin-right:3vw;
+  flex-shrink:0;
+  font-size:3.5vw;
+  padding:1.6vw 3vw;
+  border-radius:2.5vw;
+  background:#FF8A00;
+  color:white;
+  border:none;
+}
+.placeSummary .info{
+  flex-grow:1;
+}
+.placeSummary .name{
+  font-size:3.5vw;
+  font-weight:bold;
+  margin-bottom:1vw;
+  display:flex;
+  align-items:center;
+  cursor:pointer;
+}
+
+/* 多胎アイコン */
+.twinsIcon{ font-size:4.2vw; margin-left:1.5vw; }
+.circleIcon{ font-size:4.2vw; margin-left:1.5vw; }
+
+/* カウント */
+.placeSummary .counts{
+  font-size:3.5vw;
+  white-space:nowrap;
+}
+
+/* モーダル */
+#voteModal,
+#detailModal,
+#addPlaceModal{
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.5);
+  padding:10vw;
+  z-index:9999;
+  box-sizing:border-box;
+}
+#voteModal .inner,
+#detailModal .inner,
+#addPlaceModal .inner{
+  background:#FFFFFF;
+  padding:5vw;
+  border-radius:3vw;
+  border:1px solid #E5E5E5;
+  font-size:4vw;
+}
+
+/* モーダル内ボタン */
+#voteModal button,
+#addPlaceModal button{
+  width:100%;
+  font-size:4.5vw !important;
+  padding:3vw 5vw !important;
+  margin-bottom:3vw;
+  border-radius:3vw;
+  background:#FF8A00 !important;
+  color:white !important;
+  border:none;
+}
+#voteModal button.closeBtn,
+#addPlaceModal button:last-child{
+  background:#888 !important;
+}
+
+/* お気に入りエリア */
+#favArea{
+  background:#FFFFFF;
+  padding:1vw 3vw 3vw 3vw;
+  border-radius:3vw;
+  border:1px solid #E5E5E5;
+  box-shadow:0 1vw 2vw rgba(0,0,0,0.05);
+  margin-bottom:3vw;
+}
+#favArea h3{
+  font-size:3.6vw;
+  margin-bottom:1.5vw;
+  display:flex;
+  align-items:center;
+  gap:1.2vw;
+}
+
+/* お気に入り区ボタン */
+.favItem{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#FFE0B2;
+  padding:1.5vw 2vw;
+  border-radius:2vw;
+  font-size:3vw;
+  white-space:nowrap;       /* ← 解除が縦に折れない */
+  overflow:hidden;          /* ← 長い区名でも崩れない */
+}
+
+
+#favListBox{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap:1.5vw;
+  width:100%;              /* ← これが超重要！ */
+  box-sizing:border-box;
+}
+
+/* 解除ボタン */
+.favRemove{
+  color:#D00;
+  font-size:2.8vw;
+  margin-left:1vw;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+/* 横並び行 */
+.row{
+  display:flex;
+  align-items:center;
+  gap:3vw;
+  margin-bottom:3vw;
+}
+
+/* 左側：プルダウン・検索（65%） */
+.inputBox{
+  width:65%;
+  font-size:4.5vw;
+  padding:2.5vw;
+  border-radius:2vw;
+  border:1px solid #E5E5E5;
+  background:#FFFFFF;
+  color:#333;
+  box-sizing:border-box;
+}
+
+/* 右側：追加ボタン（35%） */
+.actionBtn{
+  width:35%;
+  font-size:3.8vw;
+  padding:2vw 0;
+  border-radius:2vw;
+  border:none;
+  text-align:center;
+  white-space:nowrap;
+  background:#FF8A00;
+  color:white;
+}
+
+/* 説明文 */
+#legendDetail,
+#legend{
+  color:#555;
+}
+
+/* ローディング */
+#loadingOverlay{
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.3);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+.loadingBox{
+  background:white;
+  padding:4vw 6vw;
+  border-radius:3vw;
+  font-size:4vw;
+  box-shadow:0 0 10px rgba(0,0,0,0.2);
+}
+
+.goOutGuide{
+  background:#FFFFFF;
+  padding:2.5vw 3vw;
+  border-radius:2vw;
+  font-size:4vw;             /* 少し大きく */
+  color:#555;
+  margin:2vw 0 3vw 0;
+  text-align:left;           /* 左寄せ */
+  line-height:1.4;
+  border:1px solid #E5E5E5;
+  border-top:3px solid #FF8A00;   /* ← ここを追加 */
+}
+
+.rankLink{
+  color:#1a73e8;
+  text-decoration:underline;
+  cursor:pointer;
+}
+
+
+
+</style>
+</head>
+<body>
+
+<h1>🌈 みんなで共有！今日の多胎育児</h1>
+
+<!-- ★ 起動案内：アプリ読み込み前から表示（id="app"より外側に置くこと） -->
+<div id="loadingNotice" style="
+  font-size:3.2vw;
+  color:#888;
+  margin:2vw 0 3vw 0;
+  line-height:1.6;
+">
+  読み込み中です。しばらくお待ちください…<br>
+  <span style="font-size:2.8vw;">
+    ※ 画面に何も表示されないままの場合は、一度アプリを閉じて開き直してください
+  </span>
+</div>
+
+<div id="loginArea"></div>
+<div id="viewCount"></div>
+<br>
+
+<div id="app" style="display:none">
+
+  <!-- ★ 最上部タブ -->
+  <div class="tab-container">
+    <button class="tab-button active" onclick="showTab('placeTab', this)">今日どこか行く？</button>
+    <button class="tab-button" onclick="showTab('moodTab', this)">今日の気分は？</button>
+  </div>
+
+  <!-- ★ 気分タブ -->
+  <div id="moodTab" class="tab-content">
+
+    <div id="moodResult"></div>
+
+  </div>
+
+  <!-- ★ 行き先タブ -->
+  <div id="placeTab" class="tab-content">
+
+    <!-- ★ 自分の投票先の状況バナー（施設投票済みのときだけ表示） -->
+    <div id="myPlaceStatus" style="display:none;
+      background:#FFF3E0;
+      border:1px solid #E5E5E5;
+      border-top:3px solid #FF8A00;
+      border-radius:2.5vw;
+      padding:3vw;
+      margin-bottom:4vw;
+      font-size:3.6vw;
+      line-height:1.6;
+    "></div>
+
+    <!-- ★ 初見ユーザー向け 3ステップ案内（デザイン強化版） -->
+    <div id="guideArea" style="
+      background:#FFF8D8;
+      border:1px solid #F0D890;
+      padding:3vw;
+      border-radius:2.5vw;
+      margin-bottom:4vw;
+      font-size:3.6vw;
+      line-height:1.55;
+    ">
+
+      <!-- STEP1 -->
+      <div style="margin-bottom:4vw; display:flex; gap:2vw;">
+        <div style="width:1vw; background:#FF8A00; border-radius:1vw;"></div>
+        <div>
+          <div style="font-size:3vw; color:#888; margin-bottom:1vw;">
+            同じ年齢帯の人数を表示するために必要です
+          </div>
+          <div style="font-size:4.4vw; font-weight:bold; margin-bottom:1vw;">
+            💡 多胎児の年齢帯を教えてね
+          </div>
+
+          <!-- ★ 年齢帯プルダウン（ひきこもりの上に追加） -->
+          <div id="ageSelectArea" style="
+            margin-bottom:3vw;
+            background:#FFFFFF;
+            padding:2.5vw 3vw;
+            border-radius:2vw;
+            border:1px solid #E5E5E5;
+            font-size:3.8vw;
+          ">
+            <!--
+            <label for="ageSelect" style="display:block; margin-bottom:1vw; color:#555;">
+              お子さんの年齢帯
+            </label>
+            -->
+            <select id="ageSelect" style="
+              width:100%;
+              font-size:4vw;
+              padding:2vw;
+              border-radius:2vw;
+              border:1px solid #E5E5E5;
+              background:#FFF;
+            ">
+              <option value="">年齢を選んでください</option>
+              <option value="🍼0-1">🍼 0〜1歳</option>
+              <option value="🐤2-3">🐤 2〜3歳</option>
+              <option value="📛未就学">📛 未就学</option>
+              <option value="🏫小学生以上">🏫 小学生以上</option>
+            </select>
+
+            <!-- ★ 兄弟児についての注記 -->
+            <div style="font-size:2.8vw; color:#aaa; margin-top:2vw; line-height:1.5;">
+              ※ 多胎児同士で出会える機会づくりを目的としています。<br>
+              ※ 年齢は多胎児のお子さんのみ選択してください（兄弟姉妹は対象外です🙏）
+            </div>
+
+          </div><!-- /ageSelectArea -->
+        </div>
+      </div>
+
+      <hr style="border:none; border-top:1px solid #E5E5E5; margin:3vw 0;">
+
+      <!-- STEP2 -->
+      <div style="margin-bottom:2vw; display:flex; gap:2vw;">
+        <div style="width:1vw; background:#FF8A00; border-radius:1vw; flex-shrink:0;"></div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:4.4vw; font-weight:bold; margin-bottom:2vw;">
+            💡 今日お出かけの予定は？
+          </div>
+
+          <!-- セグメントボタン：align-items:stretchで年齢帯表示時も高さを揃える -->
+          <div style="display:flex; gap:0; align-items:stretch; margin-bottom:3vw;">
+
+            <!-- ひきこもり側（左）：ボタン＋年齢帯を縦に積む -->
+            <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+              <button id="stayHomeBtn" onclick="voteStayHome()" style="
+                flex:1;
+                background:#FFFFFF;
+                color:#FF8A00;
+                border:2px solid #FF8A00;
+                border-right:1px solid #FF8A00;
+                border-radius:2vw 0 0 2vw;
+                padding:2.5vw 1.5vw;
+                font-size:3.2vw;
+                font-weight:bold;
+                display:flex;
+                flex-direction:column;
+                align-items:center;
+                justify-content:center;
+                gap:1vw;
+                box-sizing:border-box;
+                white-space:normal;
+                word-break:keep-all;
+                width:100%;
+                line-height:1.3;
+              ">
+                <span>今日はひきこもり</span>
+                <span id="stayHomeCount" style="font-size:3.2vw; color:inherit; font-weight:bold;"></span>
+              </button>
+              <!-- 年齢帯別人数：ひきこもりボタンの真下・同幅 -->
+              <div id="stayHomeAgeArea" style="
+                display:none;
+                font-size:3vw;
+                color:#888;
+                background:#FFF3E0;
+                border:2px solid #FF8A00;
+                border-top:none;
+                border-radius:0 0 0 2vw;
+                padding:1.5vw 2vw;
+                text-align:center;
+                box-sizing:border-box;
+              "></div>
+            </div>
+
+            <!-- 出かける側（右）：ボタン＋年齢帯を縦に積む -->
+            <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+              <button id="goOutBtn" onclick="submitGoOut()" style="
+                flex:1;
+                background:#FFFFFF;
+                color:#FF8A00;
+                border:2px solid #FF8A00;
+                border-left:none;
+                border-radius:0 2vw 2vw 0;
+                padding:2.5vw 1.5vw;
+                font-size:3.2vw;
+                font-weight:bold;
+                display:flex;
+                flex-direction:column;
+                align-items:center;
+                justify-content:center;
+                gap:1vw;
+                box-sizing:border-box;
+                white-space:normal;
+                word-break:keep-all;
+                width:100%;
+                line-height:1.3;
+              ">
+                <span>出かける/迷ってる</span>
+                <span id="goOutCount" style="font-size:3.2vw; color:inherit; font-weight:bold;"></span>
+              </button>
+              <!-- 年齢帯別人数：出かけるボタンの真下・同幅 -->
+              <div id="goOutAgeArea" style="
+                display:none;
+                font-size:3vw;
+                color:#888;
+                background:#FFF3E0;
+                border:2px solid #FF8A00;
+                border-top:none;
+                border-left:none;
+                border-radius:0 0 2vw 0;
+                padding:1.5vw 2vw;
+                text-align:center;
+                box-sizing:border-box;
+              "></div>
+            </div>
+
+          </div>
+
+
+
+        </div>
+      </div>
+
+        <!--
+        <div>
+          <div style="font-size:4.4vw; font-weight:bold; margin-bottom:1vw;">
+            💡 今日お出かけの予定は？
+          </div>
+
+          <div style="margin-bottom:2.5vw;">
+            🏠 お出かけしない人はここをタップ  
+            <div class="placeSummary" id="stayHomeRow">
+              <button onclick="voteStayHome()">投票</button>
+              <div class="info">
+                <div class="name" style="display:flex; align-items:center; gap:2vw;">
+                  📍今日はひきこもります
+                  <span id="stayHomeCount" style="white-space:nowrap;">🏠 0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>👣 行くか迷ってる人は、行き先を選んでね</div>
+        </div>
+        -->
+      </div>
+
+      <hr style="border:none; border-top:1px solid #E5E5E5; margin:3vw 0;">
+
+      <!-- STEP3 -->
+      <div style="display:flex; gap:2vw;">
+        <div style="width:1vw; background:#FF8A00; border-radius:1vw; flex-shrink:0;"></div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:4.4vw; font-weight:bold; margin-bottom:1vw;">
+            💡 行き先 / 見たい区を選んでね
+          </div>
+
+          <!-- ブロック①：区を選ぶ -->
+          <div style="
+            background:#FFF3E0;
+            border-radius:2.5vw;
+            padding:3vw;
+            margin-bottom:3vw;
+          ">
+            <div style="font-size:3vw; color:#FF8A00; font-weight:bold; margin-bottom:2vw; letter-spacing:0.05em;">
+              区を選ぶ
+            </div>
+
+            <!-- お気に入り区（将来復活用にコメントアウト）
+            <div id="favArea" style="margin-bottom:2.5vw;">
+              <div style="display:flex; align-items:center; gap:2vw; font-size:3.6vw; font-weight:bold; color:#854F0B; margin-bottom:1.5vw; flex-wrap:nowrap; white-space:nowrap;">
+                📌 お気に入り区
+                <span style="font-size:2.8vw; color:#888; font-weight:normal; white-space:nowrap;">追加すると⭐タップだけで行き先表示</span>
+              </div>
+              <div id="favListBox"></div>
+            </div>
+            -->
+
+            <!-- 区プルダウン（お気に入りボタンは将来復活用にコメントアウト） -->
+            <div class="row" style="margin-bottom:0;">
+              <select id="wardSelect" onchange="loadPlaces()" class="inputBox" style="width:100%;">
+                <option value="">区を選択してください</option>
+              </select>
+              <!-- <button id="favAddBtn" class="actionBtn" onclick="toggleFav()">
+                ＋お気に入り
+              </button> -->
+            </div>
+          </div>
+
+          <!-- ブロック②：昨日の様子（区選択後に表示） -->
+          <div id="yesterdayStatsBlock" style="display:none; margin-bottom:3vw;">
+            <div style="font-size:3vw; color:#FF8A00; font-weight:bold; margin-bottom:2vw; letter-spacing:0.05em;">
+              昨日の様子
+            </div>
+            <div id="yesterdayStats" style="
+              font-size:3.5vw; color:#555;
+              padding:2.5vw 3vw;
+              background:#F5F5F5;
+              border-radius:2vw;
+            "></div>
+          </div>
+
+
+
+          <!-- フィードバックカード（昨日投票がある人だけ表示） -->
+          <div id="feedbackCard" style="display:none;
+            background:#FFF8D8;
+            border:1px solid #F0D890;
+            border-top:3px solid #FF8A00;
+            padding:3vw;
+            border-radius:2.5vw;
+            margin-bottom:3vw;
+            font-size:3.8vw;
+            line-height:1.6;
+          ">
+            <div id="feedbackText" style="margin-bottom:3vw; font-weight:bold;"></div>
+            <div style="display:flex; gap:2vw;">
+              <button onclick="submitMeeting('met')" style="
+                flex:1; padding:2.5vw; border-radius:2vw;
+                background:#FF8A00; color:white; border:none; font-size:3.5vw;">
+                👋 会えた！見かけた！
+              </button>
+              <button onclick="submitMeeting('missed')" style="
+                flex:1; padding:2.5vw; border-radius:2vw;
+                background:#F5F5F5; color:#555; border:1px solid #E5E5E5; font-size:3.5vw;">
+                🌿 行かなかったor<br>タイミング合わなかったみたい
+              </button>
+            </div>
+          </div>
+
+          <!-- 行き先追加（区選択後に表示） -->
+          <div class="row" id="searchArea" style="display:none;">
+            <div id="addPlaceGuide" style="
+              width:65%;
+              font-size:3.8vw;
+              color:#555;
+              box-sizing:border-box;
+            ">
+              リストにない行き先は👉
+            </div>
+            <button id="addPlaceBtn" class="actionBtn" onclick="openAddPlaceModal()" style="display:none;">
+              ＋行き先追加
+            </button>
+          </div>
+
+          <div id="legendDetail" style="display:none;"></div>
+          <div id="legend" style="display:none;"></div>
+
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ★ 年齢帯プルダウン（ひきこもりの上に追加） -->
+    <!--
+    <div id="ageSelectArea" style="
+      margin-bottom:3vw;
+      background:#FFFFFF;
+      padding:2.5vw 3vw;
+      border-radius:2vw;
+      border:1px solid #E5E5E5;
+      font-size:3.8vw;
+    ">
+      <label for="ageSelect" style="display:block; margin-bottom:1vw; color:#555;">
+        お子さんの年齢帯
+      </label>
+
+      <select id="ageSelect" style="
+        width:100%;
+        font-size:4vw;
+        padding:2vw;
+        border-radius:2vw;
+        border:1px solid #E5E5E5;
+        background:#FFF;
+      ">
+        <option value="">年齢を選んでください</option>
+        <option value="🍼0-1">🍼 0〜1歳</option>
+        <option value="🐤2-3">🐤 2〜3歳</option>
+        <option value="📛未就学">📛 未就学</option>
+        <option value="🏫小学生以上">🏫 小学生以上</option>
+      </select>
+
+    </div>
+    -->
+
+    <!-- ひきこもり -->
+    <!--
+    <div class="placeSummary" id="stayHomeRow">
+      <button onclick="voteStayHome()">投票</button>
+      <div class="info">
+        <div class="name" style="display:flex; align-items:center; gap:2vw;">
+          📍今日はひきこもります
+          <span id="stayHomeCount" style="white-space:nowrap;">🏠 0</span>
+        </div>
+      </div>
+    </div>
+    -->
+    <!--
+    <div id="goOutGuide" class="goOutGuide">
+      おでかけを検討している人は👇から投票してね
+    </div>
+    -->
+
+
+
+
+
+
+    <div id="placeList"></div>
+
+    <div id="legendBottom" style="
+      display:none;
+      font-size:3.2vw;
+      color:#888;
+      margin-top:2vw;
+      padding:1.5vw 0;
+    ">
+      🍒…多胎のつどいあり　　🌸…多胎サークル活動場所
+    </div>
+
+  </div> <!-- /placeTab -->
+
+
+</div> <!-- /app -->
+
+<!-- 投票モーダル -->
+<div id="voteModal">
+  <div class="inner">
+    <h3 id="modalPlace"></h3>
+    <p>どれにしますか？</p>
+
+    <button onclick="submitVote('午前行くつもり')">午前行くつもり</button>
+    <button onclick="submitVote('午後行くつもり')">午後行くつもり</button>
+    <button onclick="submitVote('誰かいくなら行こうかな')">誰かいくなら行こうかな</button>
+
+    <button class="closeBtn" onclick="closeVoteModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- ★ 行き先追加モーダル -->
+<div id="addPlaceModal">
+  <div class="inner">
+    <h3>新しい行き先を追加</h3>
+
+    <p id="addPlaceWardLabel"></p>
+
+    <input id="newPlaceName" placeholder="行き先名を入力" 
+      style="width:100%; font-size:4vw; padding:2vw; margin-bottom:4vw;">
+
+    <button onclick="submitNewPlace()" 
+      style="width:100%; font-size:4.5vw; padding:3vw; margin-bottom:3vw; border-radius:3vw; background:#4CAF50; color:white; border:none;">
+      追加する
+    </button>
+
+    <button onclick="closeAddPlaceModal()" 
+      style="width:100%; font-size:4.5vw; padding:3vw; border-radius:3vw; background:#888; color:white; border:none;">
+      キャンセル
+    </button>
+  </div>
+</div>
+
+<!-- ★ 施設詳細モーダル -->
+<div id="detailModal">
+  <div class="inner">
+    <h3 id="detailName" style="display:flex; align-items:center; gap:3vw;">
+      <span id="detailNameText"></span>
+
+      <!-- アイコンを入れる場所 -->
+      <span id="detailIcons" style="display:flex; gap:3vw;"></span>
+    </h3>
+
+    <p><b>住所：</b><span id="detailAddress"></span></p>
+
+    <p>
+      <b>電話：</b>
+      <a id="detailTel" href="#" style="color:#0066cc; text-decoration:underline;"></a>
+    </p>
+
+    <p><b>開設時間：</b><span id="detailTime"></span></p>
+    <p><b>備考：</b><span id="detailNote"></span></p>
+
+    <h3 style="margin-top:4vw;">👶 年齢帯の内訳（今日）</h3>
+    <div id="ageBreakdownArea" style="font-size:3.5vw; line-height:1.5;"></div>
+
+
+    <button onclick="closeDetailModal()" 
+      style="width:100%; font-size:4.5vw; padding:3vw; border-radius:3vw; background:#888; color:white; border:none;">
+      閉じる
+    </button>
+  </div>
+</div>
+
+<!-- ★ 更新中オーバーレイ -->
+<div id="loadingOverlay">
+  <div class="loadingBox">更新中…</div>
+</div>
+
+<script>
+// ★ GASのエンドポイントURL（デプロイ後に更新不要）
+const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
+
+// ★ NS-04対策：共有秘密キー
+// GAS（コードds）の APP_SECRET と必ず同じ値にすること
+// この値は外部に漏らさないでください
+const APP_SECRET = "5sgduhdHFOFkmRm5R7EEzjg9VkzJojW3";
+
+let userId   = "";
+let userName = "";
+
+/* ★ GASをfetchで呼ぶ共通関数
+   Content-Type を text/plain にしてCORSプリフライトを回避
+   ★ NS-04対策: 全リクエストに APP_SECRET を付与 */
+async function callGAS(action, ...args) {
+  const res = await fetch(GAS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action, args, secret: APP_SECRET })
+  });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+let lastScrollPos = 0;
+let currentPlace = "";
+
+/* ★ タブ切替 */
+function showTab(tabId, btn){
+  _currentTab = tabId; // 現在のタブを記録
+  document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+  document.getElementById(tabId).style.display = 'block';
+  btn.classList.add('active');
+
+
+  if (tabId === "placeTab") {
+    // refreshFavoriteShortcuts(); // お気に入り機能一時停止中
+    // 行き先タブに戻ったとき、区が選択済みなら施設リストを再描画
+    const ward = document.getElementById("wardSelect").value;
+    if (ward) loadPlaces();
+  } else if (tabId === "moodTab") {
+    // 気分タブに切り替えたとき、施設リスト関連を非表示にする
+    document.getElementById("placeList").innerHTML = "";
+    document.getElementById("legendBottom").style.display = "none";
+    document.getElementById("yesterdayStats").style.display = "none";
+    document.getElementById("yesterdayStatsBlock").style.display = "none";
+    // ★ 修正F: タブ切替のたびに最新の気分データを取得（行き先タブの loadPlaces() と対称に）
+    loadMoodCounts();
+  }
+}
+
+/* ★ place 名の正規化 */
+function sanitizePlace(str){
+  return str
+    .replace(/\u3000/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^\s+|\s+$/g, "");
+}
+
+/* ★ 行き先検索（フロント側フィルタリング） */
+function filterPlaces(){
+  const searchEl = document.getElementById("searchBox");
+  if (!searchEl) return; // 検索ボックスなし
+  const keyword = sanitizePlace(searchEl.value);
+  const rows = document.querySelectorAll(".placeSummary");
+
+  rows.forEach(row=>{
+    const name = row.querySelector(".name").innerText;
+    row.style.display = name.includes(keyword) ? "flex" : "none";
+  });
+}
+
+/* ローディング制御 */
+function showLoading(){
+  document.getElementById("loadingOverlay").style.display = "flex";
+}
+function hideLoading(){
+  document.getElementById("loadingOverlay").style.display = "none";
+}
+
+/* ★ 二重タップ防止フラグ */
+let _isSubmitting = false;
+
+/* ★ 共通エラーハンドラ：GASエラー時にローディングを解除してアラート表示 */
+function _onGasError(err){
+  hideLoading();
+  _isSubmitting = false;
+  _isMoodSubmitting = false; // 気分投票中のエラー時もリセット
+  const msg = (err && err.message) ? err.message : "通信エラーが発生しました。";
+  showToast("⚠️ " + msg + " ページを再読み込みしてお試しください。", "error", 4000);
+}
+
+
+/* ★ 昨日の統計を表示 */
+function renderYesterdayStats(ward, stats) {
+  const el = document.getElementById("yesterdayStats");
+  const block = document.getElementById("yesterdayStatsBlock");
+  if (!stats || stats.outCount === 0) {
+    el.style.display = "none";
+    if (block) block.style.display = "none";
+    return;
+  }
+  let html = "📊 昨日この区には " + stats.outCount + " 人が出かけていたようです";
+  if (stats.metCount >= 1) {
+    html += "<br>✨ " + stats.metCount + " 人が多胎家庭と会えたようです";
+  }
+  el.innerHTML = html;
+  el.style.display = "block";
+  if (block) block.style.display = "block";
+}
+
+/* ★ フィードバックカード初期化 */
+let _feedbackPlace = "";
+let _feedbackWard  = "";
+let _todayPlace    = ""; // 今日の投票先施設名（区の自動選択に使用）
+let _todayWard     = ""; // 今日の投票先の区名
+let _wardListReady = false; // getWardList完了フラグ
+let _todayAgeReady = false; // getTodayAge完了フラグ
+let _currentTab      = "placeTab"; // 現在表示中のタブ
+let _loadPlacesReqId = 0;           // loadPlacesのリクエストID（古いレスポンスを捨てるため）
+let _isMoodSubmitting = false;      // 気分投票専用フラグ（_isSubmittingと独立）
+
+async function initFeedbackCard() {
+  try {
+    const vote = await callGAS("getYesterdayVote", userId);
+    if (!vote) return;
+    const done = await callGAS("hasTodayMeetingReport", userId);
+    if (done) return;
+    _feedbackPlace = vote.place;
+    _feedbackWard  = vote.ward;
+    const feedbackMsg = vote.place === "出かける"
+      ? "🚶 昨日お出かけの予定でしたが、多胎家庭と会えましたか？"
+      : "📍 昨日「" + vote.place + "」に行く予定でしたが、多胎家庭と会えましたか？";
+    document.getElementById("feedbackText").innerText = feedbackMsg;
+    document.getElementById("feedbackCard").style.display = "block";
+  } catch(err) { console.error("initFeedbackCard:", err); }
+}
+
+/* ★ フィードバック送信 */
+async function submitMeeting(result) {
+  document.getElementById("feedbackCard").style.display = "none";
+  try {
+    await callGAS("registerMeeting", userId, _feedbackPlace, _feedbackWard, result);
+    const ward = document.getElementById("wardSelect").value;
+    if (ward) {
+      const stats = await callGAS("getYesterdayStats", ward);
+      renderYesterdayStats(ward, stats);
+    }
+  } catch(err) { console.error("submitMeeting:", err); }
+}
+
+/* ★ セグメントボタンの選択状態を切り替える */
+function _setTravelChoice(choice){
+  // choice: "stay"=ひきこもり, "go"=出かける, ""=未選択
+  const stayBtn  = document.getElementById("stayHomeBtn");
+  const goOutBtn = document.getElementById("goOutBtn");
+
+  if (stayBtn) {
+    stayBtn.style.background = (choice === "stay") ? "#FF8A00" : "#FFFFFF";
+    stayBtn.style.color      = (choice === "stay") ? "white"   : "#FF8A00";
+  }
+  if (goOutBtn) {
+    goOutBtn.style.background = (choice === "go") ? "#FF8A00" : "#FFFFFF";
+    goOutBtn.style.color      = (choice === "go") ? "white"   : "#FF8A00";
+  }
+}
+
+/* ★ 出かけるボタン押下：DB登録＋ボタン状態切替＋スクロール */
+async function submitGoOut(){
+  if (_isSubmitting) return;
+
+  const age = document.getElementById("ageSelect").value;
+  if (!age) {
+    showToast("👶 年齢帯を選んでから投票してください");
+    return;
+  }
+
+  showLoading();
+  _isSubmitting = true;
+
+  const ward = document.getElementById("wardSelect").value;
+
+  try {
+    const payload = await callGAS("registerVoteAndRefresh", userId, "出かける", "未定", age, ward);
+    _isSubmitting = false;
+    _setTravelChoice("go"); // GAS成功後にUIを切替（失敗時は元の状態を維持）
+    const { todayCounts } = payload;
+    const stayHomeCount2 = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
+    const goOutTotal3 = payload.goOutTotal || 0;
+    _updateTravelCounts(stayHomeCount2, goOutTotal3);
+    _renderStayHomeAge(payload.allAges, stayHomeCount2);
+    _renderGoOutAgeTotal(payload.goOutAgeTotal || null, goOutTotal3);
+    _todayPlace = "出かける";
+    _todayWard  = ward;
+    _renderFromPayload(payload);
+    setTimeout(() => {
+      const target = document.getElementById("wardSelect");
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+  } catch(err) { _isSubmitting = false; _onGasError(err); }
+}
+
+/* ★ ひきこもり・出かけるカウント表示を更新（0なら非表示） */
+function _updateTravelCounts(stayHome, goOut) {
+  const stayEl = document.getElementById("stayHomeCount");
+  const goEl   = document.getElementById("goOutCount");
+  if (stayEl) stayEl.innerText = stayHome > 0 ? "🏠" + stayHome : "";
+  if (goEl)   goEl.innerText   = goOut   > 0 ? "👣" + goOut   : "";
+}
+
+/* ★ getTodayAgeとgetWardListが両方完了したら区を自動選択してloadPlaces */
+function _tryAutoLoadPlaces() {
+  if (!_wardListReady || !_todayAgeReady) return;
+  if (!_todayWard) return;
+
+  const wardSel = document.getElementById("wardSelect");
+  if (!wardSel) return;
+
+  if (wardSel.value !== _todayWard) {
+    wardSel.value = _todayWard;
+    loadPlaces();
+  }
+}
+
+/* ★ トースト通知（alertの代替）
+   type: "error"=赤, "warn"=オレンジ（デフォルト）
+   duration: 表示ミリ秒（デフォルト3000）
+*/
+let _toastTimer = null;
+function showToast(msg, type, duration) {
+  type     = type     || "warn";
+  duration = duration || 3000;
+
+  const el = document.getElementById("toast");
+  if (!el) { alert(msg); return; }
+
+  el.innerText = msg;
+  el.style.background = type === "error" ? "#C0392B" : "#FF8A00";
+  el.style.display = "block";
+  el.style.opacity = "1";
+
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    el.style.display = "none";
+  }, duration);
+}
+
+/* 初期化 */
+function init(){
+  const LIFF_ID = "2009349674-TujIMf4h";
+
+  liff.init({
+    liffId: LIFF_ID,
+    withLoginOnExternalBrowser: true
+  })
+  .then(() => {
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+    return liff.getProfile();
+  })
+  .then(profile => {
+    if (!profile) return;
+    userId   = profile.userId;
+    userName = profile.displayName;
+    _initApp();
+  })
+  .catch(err => {
+    console.error("liff.init エラー:", err);
+    const msg = (err && err.message) ? err.message : String(err);
+
+    // ★ アクセストークン期限切れ（iPhoneのLINEアプリ内キャッシュで発生）
+    //    liff.logout() でキャッシュを先にクリアしてから liff.login() で再認証
+    //    logout() なしだと古いトークンが残り login() 後も同じエラーがループする
+    if (msg.includes("access token") || msg.includes("expired") || msg.includes("FORBIDDEN")) {
+      try { liff.logout(); } catch(_) { /* logout失敗は無視 */ }
+      liff.login();
+      return;
+    }
+
+    // その他の認証エラーはトーストで通知
+    showToast("⚠️ 認証エラー: " + msg, "error", 8000);
+  });
+}
+
+
+
+async function _initApp(){
+  document.getElementById("loginArea").innerHTML =
+    "こんにちは " + userName + " さん👋";
+  document.getElementById("app").style.display = "block";
+
+  // ★ 起動案内を非表示（アプリが正常に起動できたタイミングで消す）
+  const notice = document.getElementById("loadingNotice");
+  if (notice) notice.style.display = "none";
+
+  // placeTabを初期表示
+  document.getElementById("placeTab").style.display = "block";
+
+
+  // 閲覧登録（結果不要）
+  callGAS("registerView", userId).catch(e => console.error("registerView:", e));
+
+  // 今日の年齢帯・投票先を復元
+  callGAS("getTodayAge", userId)
+    .then(data => {
+      if (data && data.age) {
+        const sel = document.getElementById("ageSelect");
+        if (sel) sel.value = data.age;
+      }
+      if (data && data.place) {
+        if (data.place === "引きこもり") {
+          _setTravelChoice("stay");
+        } else {
+          _setTravelChoice("go");
+          _todayPlace = data.place;
+          _todayWard  = data.ward || "";
+        }
+      }
+      if (data && !data.place && data.ward) {
+        _todayWard = data.ward;
+      }
+      _todayAgeReady = true;
+      _tryAutoLoadPlaces();
+    })
+    .catch(err => { console.error("getTodayAge:", err); _todayAgeReady = true; });
+
+  loadMoodCounts();
+  initFeedbackCard();
+
+  // ひきこもり・出かける人数＋年齢帯を取得
+  callGAS("getTodayCounts")
+    .then(counts => {
+      const stayHome = (counts["引きこもり"] && counts["引きこもり"]["なし"]) || 0;
+      const goOut    = (counts["出かける"]   && counts["出かける"]["未定"])   || 0;
+      _updateTravelCounts(stayHome, goOut);
+
+      callGAS("getAllAgeBreakdowns")
+        .then(allAges => {
+          setTimeout(() => {
+            _renderStayHomeAge(allAges, stayHome);
+            let goOutTotal4 = 0;
+            const goOutAgeTotal4 = { "🍼0-1": 0, "🐤2-3": 0, "📛未就学": 0, "🏫小学生以上": 0 };
+            for (const place in allAges) {
+              if (place === "引きこもり") continue;
+              for (const t in allAges[place]) {
+                for (const cat in allAges[place][t]) {
+                  if (goOutAgeTotal4[cat] !== undefined) {
+                    goOutAgeTotal4[cat] += allAges[place][t][cat];
+                  }
+                }
+              }
+            }
+            for (const place in counts) {
+              if (place === "引きこもり") continue;
+              const times = counts[place];
+              for (const t in times) goOutTotal4 += times[t];
+            }
+            _updateTravelCounts(stayHome, goOutTotal4);
+            _renderGoOutAgeTotal(goOutAgeTotal4, goOutTotal4);
+          }, 800);
+        })
+        .catch(err => console.error("getAllAgeBreakdowns:", err));
+    })
+    .catch(err => console.error("getTodayCounts:", err));
+
+  // 閲覧数
+  callGAS("getTodayViewCount")
+    .then(n => {
+      document.getElementById("viewCount").innerText =
+        "👀 今日このページを見たママパパ " + n + "人";
+    })
+    .catch(err => console.error("getTodayViewCount:", err));
+
+  // 区一覧
+  callGAS("getWardList")
+    .then(wards => {
+      const sel = document.getElementById("wardSelect");
+      sel.innerHTML = '<option value="">区を選択してください</option>';
+      wards.forEach(w => {
+        sel.innerHTML += `<option value="${w}">${w}</option>`;
+      });
+      _wardListReady = true;
+      _tryAutoLoadPlaces();
+    })
+    .catch(err => {
+      showToast("⚠️ 区一覧の読み込みに失敗しました。ページを再読み込みしてください。", "error", 4000);
+      console.error("getWardList:", err);
+    });
+}// ← _initApp() の閉じ
+
+async function refreshFavoriteShortcuts(){
+  const sel = document.getElementById("wardSelect");
+  try {
+    const favList = await callGAS("getFavoriteWards", userId);
+    const box = document.getElementById("favListBox");
+    box.innerHTML = "";
+    if (!favList || favList.length === 0) return;
+
+    favList.forEach(ward=>{
+      const item = document.createElement("div");
+      item.className = "favItem";
+      item.innerHTML = `
+        <span class="favLabel">⭐ ${ward}</span>
+        <span class="favRemove">解除</span>
+      `;
+      item.addEventListener("click", ()=>{
+        sel.value = ward;
+        loadPlaces();
+      });
+      const removeBtn = item.querySelector(".favRemove");
+      removeBtn.addEventListener("click", async (event)=>{
+        event.stopPropagation();
+        showLoading();
+        try {
+          await callGAS("toggleFavoriteWard", userId, ward);
+          refreshFavoriteShortcuts();
+          hideLoading();
+        } catch(err) { _onGasError(err); }
+      });
+      box.appendChild(item);
+    });
+  } catch(err) { console.error("getFavoriteWards:", err); }
+}
+
+/* 気分投票 */
+async function voteMood(mood){
+  if (_isMoodSubmitting) return; // 気分投票専用フラグで二重送信防止
+  showLoading();
+  _isMoodSubmitting = true;
+  try {
+    // GAS側のvoteMoodはgetTodayMoodCountsの結果も返すので1回で完結
+    const data = await callGAS("voteMood", userId, mood);
+    _isMoodSubmitting = false;
+    renderMood(data);
+    hideLoading();
+  } catch(err) { _isMoodSubmitting = false; _onGasError(err); }
+}
+
+// ★ 修正H: エラー時にユーザーへトースト通知を追加（旧: console.error のみでUIが空白のまま）
+async function loadMoodCounts(){
+  try {
+    const data = await callGAS("getTodayMoodCounts");
+    renderMood(data);
+  } catch(err) {
+    console.error("getTodayMoodCounts:", err);
+    showToast("⚠️ 気分データの取得に失敗しました。再読み込みしてください。", "error", 4000);
+  }
+}
+
+// ★ 修正G: innerHTML+onclick属性展開 → createElement+addEventListener に変更（修正Bと同パターンのXSS対策）
+// ★ 修正E連動: GAS側修正Eにより voteMood() が正しい集計データを返すようになったため、
+//              renderMood() に渡される data が正常な {mood: count, ...} 形式になる
+function renderMood(data){
+  const container = document.getElementById("moodResult");
+  container.innerHTML = "";
+
+  // dataが期待する形式でない場合（例: 修正E適用前の { ok: true } など）の防護
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    console.warn("renderMood: 不正なデータ形式", data);
+    return;
+  }
+
+  const arr = [];
+  for (let key in data) {
+    // ★ 数値以外のカウント値（true/false など）をフィルタ（修正E前の残留データへの防護）
+    if (typeof data[key] === "number") {
+      arr.push({ mood: key, count: data[key] });
+    }
+  }
+  arr.sort((a, b) => b.count - a.count);
+
+  arr.forEach((m, i) => {
+    const rank = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
+
+    // ★ createElement で安全に構築（気分ラベルに特殊文字が含まれても安全）
+    const card = document.createElement("div");
+    card.className = "moodCard";
+
+    const row = document.createElement("div");
+    row.className = "voteRow";
+
+    const btn = document.createElement("button");
+    btn.textContent = "これ！";
+    // ★ addEventListener でクロージャに m.mood を安全に保持
+    btn.addEventListener("click", () => voteMood(m.mood));
+
+    const text = document.createElement("div");
+    text.className = "voteText";
+    // ★ textContent で設定（HTMLエスケープが自動適用される）
+    text.textContent = rank + " " + m.mood + "：" + m.count + "人";
+
+    row.appendChild(btn);
+    row.appendChild(text);
+    card.appendChild(row);
+    container.appendChild(card);
+  });
+}
+
+/* 区選択 → 行き先読み込み */
+/* ★改修: getPlacesWithCounts で施設リスト+集計+年齢帯を1回のGAS呼び出しで取得 */
+function loadPlaces(){
+  const ward = document.getElementById("wardSelect").value;
+
+  document.getElementById("addPlaceBtn").style.display = ward ? "block" : "none";
+  document.getElementById("addPlaceGuide").style.display = ward ? "block" : "none";
+  document.getElementById("searchArea").style.display = ward ? "flex" : "none";
+  document.getElementById("legendDetail").style.display = "none";
+  document.getElementById("yesterdayStats").style.display = "none";
+  document.getElementById("yesterdayStatsBlock").style.display = "none";
+
+  if(!ward){
+    document.getElementById("placeList").innerHTML="";
+    document.getElementById("legendBottom").style.display = "none";
+    return;
+  }
+
+  showLoading();
+
+  const reqId = ++_loadPlacesReqId; // このリクエストのID
+
+  callGAS("getPlacesWithCounts", ward)
+    .then(payload => {
+      if (reqId !== _loadPlacesReqId) return; // 古いリクエストは捨てる
+      _renderFromPayload(payload);
+    })
+    .catch(_onGasError);
+
+  // 昨日の統計（施設リストと独立して取得）
+  callGAS("getYesterdayStats", ward)
+    .then(stats => {
+      if (reqId !== _loadPlacesReqId) return;
+      renderYesterdayStats(ward, stats);
+    })
+    .catch(err => { console.error("getYesterdayStats:", err); });
+}
+
+/* ★ サマリー一覧描画（🍒🌸＋年齢帯ミニ行） */
+/* ★改修: payloadを直接受け取る _renderFromPayload に処理を統合 */
+/* renderPlacesSummary は後方互換のために残す（addPlace/deletePlace後の再描画で使用） */
+function renderPlacesSummary(placeList){
+  // addPlace / deletePlace の後に呼ばれるパス（wardは確定済み）
+  const ward = document.getElementById("wardSelect").value;
+  showLoading();
+  callGAS("getPlacesWithCounts", ward)
+    .then(payload => { _renderFromPayload(payload); })
+    .catch(_onGasError);
+}
+
+/* ★ 実際の描画処理（payload = { todayCounts, allAges, placeList } を受け取る） */
+function _renderFromPayload(payload){
+  const { todayCounts, allAges, placeList } = payload;
+
+  // 気分タブ表示中は施設リストを描画しない（行き先タブに戻ったとき再描画される）
+  if (_currentTab === "moodTab") {
+    hideLoading();
+    return;
+  }
+  // ★ 自分の投票先ステータスを更新
+  _renderMyPlaceStatus(todayCounts);
+  _drawPlaceList(placeList, todayCounts, allAges, payload);
+}
+
+/* ★ 自分の投票先の状況バナーを描画
+   表示条件: 今日、特定施設に投票済み（引きこもり・出かける未定は除く）
+   呼び出し元: _renderFromPayload（投票・再描画のたびに自動更新） */
+function _renderMyPlaceStatus(todayCounts){
+  const el = document.getElementById("myPlaceStatus");
+  if (!el) return;
+
+  // 施設に投票していない場合は非表示
+  if (!_todayPlace || _todayPlace === "引きこもり" || _todayPlace === "出かける") {
+    el.style.display = "none";
+    return;
+  }
+
+  const p = todayCounts[_todayPlace];
+  if (!p) {
+    el.style.display = "none";
+    return;
+  }
+
+  const gozen = p["午前行くつもり"]        || 0;
+  const gogo  = p["午後行くつもり"]        || 0;
+  const dareka = p["誰かいくなら行こうかな"] || 0;
+  const total = gozen + gogo + dareka;
+
+  // タイトル行
+  const title = document.createElement("div");
+  title.style.cssText = "font-size:3vw; color:#888; margin-bottom:1.5vw;";
+  title.textContent = "あなたの選んだお出かけ先の状況";
+
+  // 施設名行
+  const name = document.createElement("div");
+  name.style.cssText = "font-size:4vw; font-weight:bold; color:#FF8A00; margin-bottom:1.5vw;";
+  name.textContent = "📍 " + _todayPlace;
+
+  // カウント行
+  const counts = document.createElement("div");
+  counts.style.cssText = "font-size:3.5vw; color:#555;";
+  if (total === 0) {
+    counts.textContent = "まだ他に投票している人はいません";
+  } else {
+    counts.textContent =
+      "午前 " + gozen + "人　午後 " + gogo + "人　🤔 " + dareka + "人";
+  }
+
+  el.innerHTML = "";
+  el.appendChild(title);
+  el.appendChild(name);
+  el.appendChild(counts);
+  el.style.display = "block";
+}
+
+/* ★ DOM描画本体（todayCounts / allAges / placeList が揃った時点で呼ぶ） */
+/* ★ 修正B: innerHTML+onclick属性展開 → createElement+addEventListener に全面変更（XSS対策） */
+/* ★ 修正C: 年齢帯sum関数にオプショナルチェーニングを追加（nullアクセス防止） */
+function _drawPlaceList(placeList, todayCounts, allAges, payload){
+
+  const container = document.getElementById("placeList");
+  container.innerHTML = "";
+
+  // ★ 投票数の多い順にソート（同数は元の順を維持）
+  const sortedList = [...placeList].sort((a, b) => {
+    const nameA = sanitizePlace(a.split("||")[0]);
+    const nameB = sanitizePlace(b.split("||")[0]);
+    const cA = todayCounts[nameA];
+    const cB = todayCounts[nameB];
+    const totalA = cA ? (cA["午前行くつもり"] || 0) + (cA["午後行くつもり"] || 0) + (cA["誰かいくなら行こうかな"] || 0) : 0;
+    const totalB = cB ? (cB["午前行くつもり"] || 0) + (cB["午後行くつもり"] || 0) + (cB["誰かいくなら行こうかな"] || 0) : 0;
+    return totalB - totalA;
+  });
+
+  sortedList.forEach(raw => {
+    const parts     = raw.split("||");
+    const placeName = sanitizePlace(parts[0]);
+    const added     = parts[1] || "";
+    const twins     = parts[2] || "";
+    const circle    = parts[3] || "";
+    const address   = parts[4] || "";
+    const tel       = parts[5] || "";
+    const time      = parts[6] || "";
+    const note      = parts[7] || "";
+    const instaUrl  = parts[8] || "";
+    const homeUrl   = parts[9] || "";
+
+    const hasTwins  = twins  === "〇";
+    const hasCircle = circle === "〇";
+
+    const p = todayCounts[placeName] || {
+      "午前行くつもり": 0,
+      "午後行くつもり": 0,
+      "誰かいくなら行こうかな": 0
+    };
+
+    const ageData  = allAges[placeName];
+    const safeId   = placeName.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const isSelected = (_todayPlace === placeName);
+
+    // ── カード要素
+    const div = document.createElement("div");
+    div.className = "placeSummary";
+    div.id = "row_" + safeId;
+    if (isSelected) {
+      div.style.border = "2px solid #FF8A00";
+    }
+
+    // ── infoエリア
+    const info = document.createElement("div");
+    info.className = "info";
+
+    // ── 施設名行
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "name";
+
+    // アイコン＋施設名（青字＋下線でリンクとわかるように）＋詳細バッジ
+    const mainSpan = document.createElement("span");
+    mainSpan.style.cssText = "display:inline-flex; align-items:center; gap:1.5vw; flex-wrap:wrap;";
+
+    const icon = hasTwins ? "🍒" : hasCircle ? "🌸" : "📍";
+
+    // ★ 施設名をリンク風スタイルに（モーダル内の住所リンクと同じ装飾）
+    const nameText = document.createElement("span");
+    nameText.style.cssText = "color:#1a73e8; text-decoration:underline; font-weight:500;";
+    nameText.textContent = icon + " " + placeName;
+    mainSpan.appendChild(nameText);
+
+    const detailBadge = document.createElement("span");
+    detailBadge.style.cssText = "font-size:2.8vw; color:#FF8A00; border:1px solid #FF8A00; border-radius:1vw; padding:0.3vw 1.2vw; font-weight:normal; white-space:nowrap;";
+    detailBadge.textContent = "詳細 ›";
+    mainSpan.appendChild(detailBadge);
+
+    // 選択中バッジ＋取消ボタン
+    if (isSelected) {
+      const selectedWrap = document.createElement("span");
+      selectedWrap.style.cssText = "display:inline-flex; align-items:center; gap:1vw;";
+
+      const selectedBadge = document.createElement("span");
+      selectedBadge.style.cssText = "font-size:2.8vw; background:#FF8A00; color:white; border-radius:1vw; padding:0.3vw 1.5vw; white-space:nowrap;";
+      selectedBadge.textContent = "✓ 選択中";
+
+      const cancelBtn = document.createElement("span");
+      cancelBtn.style.cssText = "font-size:3vw; color:#FF8A00; border:1px solid #FF8A00; border-radius:1vw; padding:0.2vw 1.2vw; white-space:nowrap; cursor:pointer;";
+      cancelBtn.textContent = "✕";
+      // ★ addEventListener でクロージャにより placeName を安全に保持
+      cancelBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        cancelVote(placeName);
+      });
+
+      selectedWrap.appendChild(selectedBadge);
+      selectedWrap.appendChild(cancelBtn);
+      mainSpan.appendChild(selectedWrap);
+    }
+
+    nameDiv.appendChild(mainSpan);
+
+    // 追加施設の削除ボタン
+    if (added) {
+      const delBtn = document.createElement("span");
+      delBtn.style.cssText = "margin-left:2vw; font-size:4.5vw; cursor:pointer;";
+      delBtn.textContent = "🗑️";
+      // ★ addEventListener でクロージャにより placeName を安全に保持
+      delBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        confirmDeletePlace(placeName);
+      });
+      nameDiv.appendChild(delBtn);
+    }
+
+    // ★ 詳細モーダルのクリックイベントを data-* 属性 + addEventListener で登録
+    nameDiv.dataset.placeName = placeName;
+    nameDiv.dataset.address   = address;
+    nameDiv.dataset.tel       = tel;
+    nameDiv.dataset.time      = time;
+    nameDiv.dataset.note      = note;
+    nameDiv.dataset.instaUrl  = instaUrl;
+    nameDiv.dataset.homeUrl   = homeUrl;
+    nameDiv.addEventListener("click", function() {
+      openDetailModal(
+        this.dataset.placeName,
+        this.dataset.address,
+        this.dataset.tel,
+        this.dataset.time,
+        this.dataset.note,
+        this.dataset.instaUrl,
+        this.dataset.homeUrl
+      );
+    });
+
+    info.appendChild(nameDiv);
+
+    // ── カウント行
+    const countDiv = document.createElement("div");
+    countDiv.className = "counts";
+    countDiv.textContent =
+      "午前 " + p["午前行くつもり"] + "　" +
+      "午後 " + p["午後行くつもり"] + "　" +
+      "🤔 "  + p["誰かいくなら行こうかな"];
+    info.appendChild(countDiv);
+
+    div.appendChild(info);
+
+    // ── 投票ボタン
+    const voteBtn = document.createElement("button");
+    voteBtn.style.cssText = "flex-shrink:0; background:#FF8A00; color:white; border:none; padding:1.6vw 3.5vw; border-radius:2.5vw; font-size:3.5vw; white-space:nowrap;";
+    voteBtn.textContent = "投票 ›";
+    // ★ addEventListener でクロージャにより placeName を安全に保持
+    voteBtn.addEventListener("click", () => openVoteModal(placeName));
+    div.appendChild(voteBtn);
+
+    // ── 年齢帯ミニ行（施設）
+    if (ageData) {
+      // ★ 修正C: オプショナルチェーニング（?.）で存在しないキーへのアクセスを安全に
+      const sum = (cat) =>
+        (ageData["午前行くつもり"]?.[cat]        || 0) +
+        (ageData["午後行くつもり"]?.[cat]        || 0) +
+        (ageData["誰かいくなら行こうかな"]?.[cat] || 0);
+
+      const ageRow = document.createElement("div");
+      ageRow.style.fontSize  = "3vw";
+      ageRow.style.marginTop = "1vw";
+      ageRow.style.color     = "#555";
+      ageRow.textContent =
+        "🍼" + sum("🍼0-1")    + "　" +
+        "🐤" + sum("🐤2-3")    + "　" +
+        "📛" + sum("📛未就学") + "　" +
+        "🏫" + sum("🏫小学生以上");
+
+      info.appendChild(ageRow);
+    }
+
+    container.appendChild(div);
+  });
+
+  /* ============================
+     ひきこもり・出かける カウント更新
+  ============================ */
+  const stayHome   = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
+  const goOutTotal = payload ? (payload.goOutTotal || 0) : 0;
+  _updateTravelCounts(stayHome, goOutTotal);
+
+  _renderStayHomeAge(allAges, stayHome);
+  _renderGoOutAgeTotal(payload ? (payload.goOutAgeTotal || null) : null, goOutTotal);
+
+  hideLoading();
+  filterPlaces();
+
+  // 🍒🌸 説明文：1件以上ある場合だけ表示
+  const hasIcons = placeList.some(raw => {
+    const parts = raw.split("||");
+    return parts[2] === "〇" || parts[3] === "〇";
+  });
+  document.getElementById("legendBottom").style.display = hasIcons ? "block" : "none";
+
+}
+
+/* ★ 詳細モーダル */
+function openDetailModal(name, address, tel, time, note, instaUrl, homeUrl){
+
+  document.getElementById("detailNameText").innerText = name;
+
+  /* ★ 住所をタップで Google Maps を開くリンクにする */
+  const mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address);
+  const addressHtml = `
+    <a href="${mapUrl}" target="_blank"
+       style="color:#1a73e8; text-decoration:underline; font-weight:500;">
+      ${address}
+    </a>
+  `;
+  document.getElementById("detailAddress").innerHTML = addressHtml;
+
+  /* ★ 電話番号をタップで発信できるようにする */
+  document.getElementById("detailTel").innerText = tel;
+  document.getElementById("detailTel").href = "tel:" + tel;
+
+  document.getElementById("detailTime").innerText = time;
+  document.getElementById("detailNote").innerText = note;
+
+  /* ★ アイコン生成 */
+  let icons = "";
+
+  if (homeUrl){
+    icons += `
+      <a href="${homeUrl}" target="_blank">
+        <span style="font-size:6vw;">🏠</span>
+      </a>
+    `;
+  }
+
+if (instaUrl){
+  icons += `
+    <a href="${instaUrl}" target="_blank">
+      <span style="font-size:6vw;">📷</span>
+    </a>
+  `;
+}
+
+  document.getElementById("detailIcons").innerHTML = icons;
+
+  document.getElementById("detailModal").style.display = "block";
+
+    // ★ 年齢帯内訳を読み込む
+  callGAS("getAgeBreakdown", name)
+    .then(data => { renderAgeBreakdown(data); })
+    .catch(err => { console.error("getAgeBreakdown:", err); });
+
+}
+
+function closeDetailModal(){
+  document.getElementById("detailModal").style.display = "none";
+}
+
+/* モーダル制御（投票） */
+function openVoteModal(place){
+  currentPlace = sanitizePlace(place);
+  document.getElementById("modalPlace").innerText = currentPlace;
+  document.getElementById("voteModal").style.display = "block";
+}
+function closeVoteModal(){
+  document.getElementById("voteModal").style.display = "none";
+}
+
+/* ★ 行き先追加モーダル */
+function openAddPlaceModal(){
+  const ward = document.getElementById("wardSelect").value;
+  if(!ward){
+    showToast("📍 先に区を選択してください");
+    return false;
+  }
+  document.getElementById("addPlaceWardLabel").innerText = "区：" + ward;
+  document.getElementById("addPlaceModal").style.display = "block";
+}
+function closeAddPlaceModal(){
+  document.getElementById("addPlaceModal").style.display = "none";
+}
+
+/* ★ 行き先追加処理 */
+function submitNewPlace(){
+  const ward = document.getElementById("wardSelect").value;
+  const place = sanitizePlace(document.getElementById("newPlaceName").value);
+
+  if(!place){
+    showToast("✏️ 行き先名を入力してください");
+    return;
+  }
+
+  showLoading();
+
+  callGAS("addPlace", ward, place)
+    .then(() => {
+      hideLoading(); // 施設一覧再取得の前に解除（再取得失敗時もローディングが残らないよう）
+      document.getElementById("newPlaceName").value = ""; // ★ 修正D: 入力欄をクリア（次回追加時に前回名が残らないようにする）
+      closeAddPlaceModal();
+      renderPlacesSummary([]);
+    })
+    .catch(_onGasError);
+}
+
+function confirmDeletePlace(name){
+  if(!confirm(name + " を削除しますか？")){
+    return;
+  }
+
+  showLoading();
+
+  const ward = document.getElementById("wardSelect").value;
+
+  callGAS("deletePlace", ward, name)
+    .then(() => {
+      hideLoading(); // 施設一覧再取得の前に解除
+      renderPlacesSummary([]);
+    })
+    .catch(_onGasError);
+}
+
+/* ★ 投票処理 */
+/* ★改修: registerVoteAndRefresh で書き込み+集計+施設リストを1回で取得 */
+function submitVote(time){
+  if (_isSubmitting) return;
+  lastScrollPos = window.scrollY;
+
+  const age = document.getElementById("ageSelect").value;
+  if (!age) {
+    showToast("👶 年齢帯を選んでから投票してください");
+    return;
+  }
+
+  closeVoteModal();
+  showLoading();
+  _isSubmitting = true;
+
+  const place = sanitizePlace(currentPlace);
+  const ward  = document.getElementById("wardSelect").value;
+
+  callGAS("registerVoteAndRefresh", userId, place, time, age, ward)
+    .then(payload => {
+      _isSubmitting = false;
+      _todayPlace = place;
+      _todayWard  = ward;
+      _setTravelChoice("go");
+      const { todayCounts, allAges } = payload;
+      const stayHome2   = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
+      const goOutTotal2 = payload.goOutTotal || 0;
+      _updateTravelCounts(stayHome2, goOutTotal2);
+      _renderStayHomeAge(allAges, stayHome2);
+      _renderGoOutAgeTotal(payload.goOutAgeTotal || null, goOutTotal2);
+      _renderFromPayload(payload);
+      window.scrollTo(0, lastScrollPos);
+    })
+    .catch(err => { _isSubmitting = false; _onGasError(err); });
+}
+
+
+/* ★ 施設投票取消：出かける（未定）状態に戻す */
+function cancelVote(placeName) {
+  if (_isSubmitting) return;
+
+  const age  = document.getElementById("ageSelect").value;
+  const ward = document.getElementById("wardSelect").value;
+  if (!age) {
+    showToast("👶 年齢帯を選んでから投票してください");
+    return;
+  }
+
+  showLoading();
+  _isSubmitting = true;
+
+  callGAS("registerVoteAndRefresh", userId, "出かける", "未定", age, ward)
+    .then(payload => {
+      _isSubmitting = false;
+      _todayPlace = "出かける";
+      _todayWard  = ward;
+      _setTravelChoice("go");
+      const { todayCounts, allAges } = payload;
+      const stayHome   = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
+      const goOutTotal = payload.goOutTotal || 0;
+      _updateTravelCounts(stayHome, goOutTotal);
+      _renderStayHomeAge(allAges, stayHome);
+      _renderGoOutAgeTotal(payload.goOutAgeTotal || null, goOutTotal);
+      _renderFromPayload(payload);
+    })
+    .catch(err => { _isSubmitting = false; _onGasError(err); });
+}
+
+/* ★ ひきこもりの年齢帯別人数を描画 */
+function _renderStayHomeAge(allAges, stayHome){
+  const area = document.getElementById("stayHomeAgeArea");
+  if (!area) return;
+
+  if (!stayHome || stayHome === 0) {
+    area.style.display = "none";
+    return;
+  }
+
+  const stayAge = allAges["引きこもり"];
+  if (!stayAge) {
+    // 投票データはあるが年齢帯内訳がない場合（自分が最初の投票者など）
+    // 人数だけ表示して終わる
+    area.innerHTML = "🏠 " + stayHome + "人";
+    area.style.display = "block";
+    return;
+  }
+
+  const sum = (cat) =>
+    (stayAge["午前行くつもり"]?.[cat] || 0) +
+    (stayAge["午後行くつもり"]?.[cat] || 0) +
+    (stayAge["誰かいくなら行こうかな"]?.[cat] || 0) +
+    (stayAge["なし"]?.[cat] || 0);
+
+  area.innerHTML =
+    "🍼" + sum("🍼0-1") + "　" +
+    "🐤" + sum("🐤2-3") + "　" +
+    "📛" + sum("📛未就学") + "　" +
+    "🏫" + sum("🏫小学生以上");
+  area.style.display = "block";
+}
+
+/* ★ 出かける側の年齢帯別人数を描画（施設投票+未定の合計） */
+function _renderGoOutAgeTotal(goOutAgeTotal, goOutTotal){
+  const area = document.getElementById("goOutAgeArea");
+  if (!area) return;
+
+  if (!goOutTotal || goOutTotal === 0) {
+    area.style.display = "none";
+    return;
+  }
+
+  if (!goOutAgeTotal) {
+    area.style.display = "none";
+    return;
+  }
+
+  area.innerHTML =
+    "🍼" + (goOutAgeTotal["🍼0-1"]   || 0) + "　" +
+    "🐤" + (goOutAgeTotal["🐤2-3"]   || 0) + "　" +
+    "📛" + (goOutAgeTotal["📛未就学"] || 0) + "　" +
+    "🏫" + (goOutAgeTotal["🏫小学生以上"] || 0);
+  area.style.display = "block";
+}
+
+/* ★ 後方互換（旧_renderGoOutAgeの呼び出しが残っている場合のフォールバック） */
+function _renderGoOutAge(allAges, goOut){
+  _renderGoOutAgeTotal(null, 0);
+}
+
+/* ★改修: registerVoteAndRefresh でひきこもり投票も1回で完結 */
+function voteStayHome(){
+  if (_isSubmitting) return;
+  lastScrollPos = window.scrollY;
+
+  const age = document.getElementById("ageSelect").value;
+  if (!age) {
+    showToast("👶 年齢帯を選んでから投票してください");
+    return;
+  }
+
+  showLoading();
+  _isSubmitting = true;
+
+  const ward = document.getElementById("wardSelect").value;
+
+  callGAS("registerVoteAndRefresh", userId, "引きこもり", "なし", age, ward)
+    .then(payload => {
+      _isSubmitting = false;
+      const { todayCounts, allAges } = payload;
+      const stayHome = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
+      _todayPlace = "";
+      _todayWard  = "";
+      _updateTravelCounts(stayHome, 0);
+      _setTravelChoice(stayHome > 0 ? "stay" : "");
+      _renderStayHomeAge(allAges, stayHome);
+      _renderGoOutAgeTotal(null, 0);
+      _renderFromPayload(payload);
+      window.scrollTo(0, lastScrollPos);
+    })
+    .catch(err => { _isSubmitting = false; _onGasError(err); });
+}
+
+
+function toggleFav(){
+  const ward = document.getElementById("wardSelect").value;
+  if (!ward){
+    showToast("📍 先に区を選択してください");
+    return;
+  }
+  showLoading();  // ← 追加
+
+  callGAS("toggleFavoriteWard", userId, ward)
+    .then(() => {
+      document.getElementById("wardSelect").value = ward;
+      refreshFavoriteShortcuts();
+      hideLoading();
+    })
+    .catch(_onGasError);
+}
+
+function renderAgeBreakdown(data){
+  const area = document.getElementById("ageBreakdownArea");
+
+  let html = `
+    <div style="font-size:3.2vw; margin-bottom:2vw; color:#666;">
+      🍼:0-1歳　🐤:2-3歳　📛:未就学　🏫:小学生以上
+    </div>
+  `;
+
+  const rows = [
+    { label: "午前", key: "午前行くつもり" },
+    { label: "午後", key: "午後行くつもり" },
+    { label: "誰か", key: "誰かいくなら行こうかな" }
+  ];
+
+  rows.forEach(r => {
+    const d = data[r.key];
+    html += `
+      <div style="margin-bottom:1.5vw;">
+        <b>【${r.label}】</b>
+        🍼${d["🍼0-1"]}　
+        🐤${d["🐤2-3"]}　
+        📛${d["📛未就学"]}　
+        🏫${d["🏫小学生以上"]}
+      </div>
+    `;
+  });
+
+  area.innerHTML = html;
+}
+
+
+
+init();
+</script>
+
+  <!-- ★ トースト通知 -->
+  <div id="toast" style="
+    display:none;
+    position:fixed;
+    bottom:8vw;
+    left:50%;
+    transform:translateX(-50%);
+    min-width:60vw;
+    max-width:88vw;
+    background:#333;
+    color:white;
+    font-size:3.8vw;
+    padding:3vw 4vw;
+    border-radius:2.5vw;
+    text-align:center;
+    z-index:9999;
+    line-height:1.5;
+    word-break:break-all;
+  "></div>
+</body>
+</html>
