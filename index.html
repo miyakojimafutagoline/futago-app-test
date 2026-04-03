@@ -1197,6 +1197,8 @@ async function _initApp(){
   }
 }// ← _initApp() の閉じ
 
+// ★ お気に入り機能停止中: ユーザー情報シートに統合予定のため一時停止
+/*
 async function refreshFavoriteShortcuts(){
   const sel = document.getElementById("wardSelect");
   try {
@@ -1230,6 +1232,7 @@ async function refreshFavoriteShortcuts(){
     });
   } catch(err) { console.error("getFavoriteWards:", err); }
 }
+*/
 
 /* 気分投票 */
 async function voteMood(mood){
@@ -1906,6 +1909,8 @@ function voteStayHome(){
 }
 
 
+// ★ お気に入り機能停止中: ユーザー情報シートに統合予定のため一時停止
+/*
 function toggleFav(){
   const ward = document.getElementById("wardSelect").value;
   if (!ward){
@@ -1922,6 +1927,7 @@ function toggleFav(){
     })
     .catch(_onGasError);
 }
+*/
 
 function renderAgeBreakdown(data){
   const area = document.getElementById("ageBreakdownArea");
