@@ -281,18 +281,20 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 }
 .btnSpinner {
   display: none;
-  width: 3.5vw;
-  height: 3.5vw;
-  border: 0.5vw solid rgba(255,255,255,0.5);
-  border-top-color: white;
+  width: 5vw;
+  height: 5vw;
+  border: 0.7vw solid rgba(255,255,255,0.4);
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spinnerRotate 0.7s linear infinite;
+  flex-shrink: 0;
 }
+/* ひきこもりボタン用：オレンジ背景になった後なので白スピナー */
 .btnSpinner.orange {
-  border-color: rgba(255,138,0,0.35);
-  border-top-color: #FF8A00;
+  border-color: rgba(255,255,255,0.4);
+  border-top-color: #ffffff;
 }
-.btnSpinnerActive { display: inline-block !important; }
+.btnSpinnerActive { display: block !important; }
 
 /* ★ カウント数字のフェード更新アニメーション */
 @keyframes countFadeIn {
