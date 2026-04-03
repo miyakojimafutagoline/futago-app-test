@@ -275,6 +275,34 @@ h3{ font-size:4vw; margin-bottom:2vw; }
   box-shadow:0 0 10px rgba(0,0,0,0.2);
 }
 
+/* ★ 送信中スピナー（楽観的UI用） */
+@keyframes spinnerRotate {
+  to { transform: rotate(360deg); }
+}
+.btnSpinner {
+  display: none;
+  width: 3.5vw;
+  height: 3.5vw;
+  border: 0.5vw solid rgba(255,255,255,0.5);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spinnerRotate 0.7s linear infinite;
+}
+.btnSpinner.orange {
+  border-color: rgba(255,138,0,0.35);
+  border-top-color: #FF8A00;
+}
+.btnSpinnerActive { display: inline-block !important; }
+
+/* ★ カウント数字のフェード更新アニメーション */
+@keyframes countFadeIn {
+  from { opacity: 0.2; transform: scale(0.85); }
+  to   { opacity: 1;   transform: scale(1); }
+}
+.countUpdated {
+  animation: countFadeIn 0.35s ease-out;
+}
+
 .goOutGuide{
   background:#FFFFFF;
   padding:2.5vw 3vw;
@@ -448,6 +476,7 @@ h3{ font-size:4vw; margin-bottom:2vw; }
               ">
                 <span>今日はひきこもり</span>
                 <span id="stayHomeCount" style="font-size:3.2vw; color:inherit; font-weight:bold;"></span>
+                <span id="stayHomeSpinner" class="btnSpinner orange"></span>
               </button>
               <!-- 年齢帯別人数：ひきこもりボタンの真下・同幅 -->
               <div id="stayHomeAgeArea" style="
@@ -489,6 +518,7 @@ h3{ font-size:4vw; margin-bottom:2vw; }
               ">
                 <span>出かける/迷ってる</span>
                 <span id="goOutCount" style="font-size:3.2vw; color:inherit; font-weight:bold;"></span>
+                <span id="goOutSpinner" class="btnSpinner"></span>
               </button>
               <!-- 年齢帯別人数：出かけるボタンの真下・同幅 -->
               <div id="goOutAgeArea" style="
@@ -986,6 +1016,7 @@ async function submitGoOut(){
   _setTravelChoice("go");
   _todayPlace = "出かける";
   _todayWard  = ward;
+  _showVoteSpinner("go");  // ★ 送信中スピナー表示
   setTimeout(() => {
     const target = document.getElementById("wardSelect");
     if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -994,6 +1025,7 @@ async function submitGoOut(){
   try {
     const payload = await callGAS("registerVoteAndRefresh", userId, "出かける", "未定", age, ward);
     _isSubmitting = false;
+    _hideVoteSpinner();  // ★ スピナー非表示
     // GAS完了後に実データでカウントを更新
     const { todayCounts } = payload;
     const stayHomeCount2 = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
@@ -1005,6 +1037,7 @@ async function submitGoOut(){
   } catch(err) {
     // ★ 失敗時はUIを元の状態に戻す
     _isSubmitting = false;
+    _hideVoteSpinner();  // ★ スピナー非表示
     _todayPlace = prevPlace;
     _todayWard  = prevWard;
     _setTravelChoice(prevChoice);
@@ -1016,8 +1049,33 @@ async function submitGoOut(){
 function _updateTravelCounts(stayHome, goOut) {
   const stayEl = document.getElementById("stayHomeCount");
   const goEl   = document.getElementById("goOutCount");
-  if (stayEl) stayEl.innerText = stayHome > 0 ? "🏠" + stayHome : "";
-  if (goEl)   goEl.innerText   = goOut   > 0 ? "👣" + goOut   : "";
+  if (stayEl) {
+    stayEl.innerText = stayHome > 0 ? "🏠" + stayHome : "";
+    stayEl.classList.remove("countUpdated");
+    void stayEl.offsetWidth; // reflow で animation リセット
+    stayEl.classList.add("countUpdated");
+  }
+  if (goEl) {
+    goEl.innerText = goOut > 0 ? "👣" + goOut : "";
+    goEl.classList.remove("countUpdated");
+    void goEl.offsetWidth;
+    goEl.classList.add("countUpdated");
+  }
+}
+
+/* ★ 送信中スピナーの表示・非表示（楽観的UI用） */
+function _showVoteSpinner(choice) {
+  // choice: "stay"=ひきこもり側, "go"=出かける側
+  const staySpinner = document.getElementById("stayHomeSpinner");
+  const goSpinner   = document.getElementById("goOutSpinner");
+  if (staySpinner) staySpinner.classList.toggle("btnSpinnerActive", choice === "stay");
+  if (goSpinner)   goSpinner.classList.toggle("btnSpinnerActive", choice === "go");
+}
+function _hideVoteSpinner() {
+  const staySpinner = document.getElementById("stayHomeSpinner");
+  const goSpinner   = document.getElementById("goOutSpinner");
+  if (staySpinner) staySpinner.classList.remove("btnSpinnerActive");
+  if (goSpinner)   goSpinner.classList.remove("btnSpinnerActive");
 }
 
 /* ★ getTodayAgeとgetWardListが両方完了したら区を自動選択してloadPlaces */
@@ -1781,10 +1839,12 @@ function submitVote(time){
   _todayPlace = place;
   _todayWard  = ward;
   _setTravelChoice("go");
+  _showVoteSpinner("go");  // ★ 送信中スピナー表示
 
   callGAS("registerVoteAndRefresh", userId, place, time, age, ward)
     .then(payload => {
       _isSubmitting = false;
+      _hideVoteSpinner();  // ★ スピナー非表示
       // GAS完了後に実データでカウントを更新
       const { todayCounts, allAges } = payload;
       const stayHome2   = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
@@ -1798,6 +1858,7 @@ function submitVote(time){
     .catch(err => {
       // ★ 失敗時はUIを元の状態に戻す
       _isSubmitting = false;
+      _hideVoteSpinner();  // ★ スピナー非表示
       _todayPlace = prevPlace;
       _todayWard  = prevWard;
       _setTravelChoice(prevChoice);
@@ -1826,10 +1887,12 @@ function cancelVote(placeName) {
   _todayPlace = "出かける";
   _todayWard  = ward;
   _setTravelChoice("go");
+  _showVoteSpinner("go");  // ★ 送信中スピナー表示
 
   callGAS("registerVoteAndRefresh", userId, "出かける", "未定", age, ward)
     .then(payload => {
       _isSubmitting = false;
+      _hideVoteSpinner();  // ★ スピナー非表示
       const { todayCounts, allAges } = payload;
       const stayHome   = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
       const goOutTotal = payload.goOutTotal || 0;
@@ -1841,6 +1904,7 @@ function cancelVote(placeName) {
     .catch(err => {
       // ★ 失敗時はUIを元の状態に戻す
       _isSubmitting = false;
+      _hideVoteSpinner();  // ★ スピナー非表示
       _todayPlace = prevPlace;
       _todayWard  = prevWard;
       _setTravelChoice(prevChoice);
@@ -1930,10 +1994,12 @@ function voteStayHome(){
   _todayPlace = "";
   _todayWard  = "";
   _setTravelChoice("stay");
+  _showVoteSpinner("stay");  // ★ 送信中スピナー表示
 
   callGAS("registerVoteAndRefresh", userId, "引きこもり", "なし", age, ward)
     .then(payload => {
       _isSubmitting = false;
+      _hideVoteSpinner();  // ★ スピナー非表示
       const { todayCounts, allAges } = payload;
       const stayHome = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
       _updateTravelCounts(stayHome, 0);
@@ -1945,6 +2011,7 @@ function voteStayHome(){
     .catch(err => {
       // ★ 失敗時はUIを元の状態に戻す
       _isSubmitting = false;
+      _hideVoteSpinner();  // ★ スピナー非表示
       _todayPlace = prevPlace;
       _todayWard  = prevWard;
       _setTravelChoice(prevChoice);
