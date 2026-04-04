@@ -1233,6 +1233,9 @@ async function _initApp(){
   // placeTabを初期表示
   document.getElementById("placeTab").style.display = "block";
 
+  // ★ データ取得中は「更新中」を表示（タイトルだけ出て止まる問題を解消）
+  showLoading();
+
   // 閲覧登録（結果不要・独立して実行）
   callGAS("registerView", userId).catch(e => console.error("registerView:", e));
 
@@ -1262,6 +1265,9 @@ async function _initApp(){
       _todayWard = todayAge.ward;
     }
     _todayAgeReady = true;
+
+    // ★ データ取得完了 → ローディング解除してから画面を組み立てる
+    hideLoading();
 
     // ② ひきこもり・出かけるカウント表示
     const { todayCounts, allAges, goOutTotal, goOutAgeTotal } = init;
@@ -1305,6 +1311,7 @@ async function _initApp(){
 
   } catch (err) {
     console.error("getInitPayload:", err);
+    hideLoading(); // ★ 失敗時もローディングを解除
     // getInitPayload失敗時のフォールバック：区一覧だけ個別取得してアプリを継続
     _todayAgeReady = true;
     callGAS("getWardList")
@@ -1367,15 +1374,32 @@ async function refreshFavoriteShortcuts(){
 /* 気分投票 */
 async function voteMood(mood){
   if (_isMoodSubmitting) return; // 気分投票専用フラグで二重送信防止
-  showLoading();
   _isMoodSubmitting = true;
+
+  // ★ 楽観的UI: 押されたボタンをスピナーに切り替える
+  const pressedBtn = document.querySelector(
+    "#moodResult button[data-mood='" + mood.replace(/'/g, "\\'") + "']"
+  );
+  let origText = null;
+  if (pressedBtn) {
+    origText = pressedBtn.innerHTML;
+    pressedBtn.innerHTML = "<span class='placeCardSpinner'></span>";
+    pressedBtn.disabled = true;
+  }
+
   try {
-    // GAS側のvoteMoodはgetTodayMoodCountsの結果も返すので1回で完結
     const data = await callGAS("voteMood", userId, mood);
     _isMoodSubmitting = false;
-    renderMood(data);
-    hideLoading();
-  } catch(err) { _isMoodSubmitting = false; _onGasError(err); }
+    renderMood(data); // 完了後に全体を再描画（スピナーも自動的に消える）
+  } catch(err) {
+    _isMoodSubmitting = false;
+    // ★ 失敗時はボタンを元に戻す
+    if (pressedBtn && origText !== null) {
+      pressedBtn.innerHTML = origText;
+      pressedBtn.disabled = false;
+    }
+    showToast("⚠️ 投票の送信に失敗しました。画面を閉じて開き直してください。", "error", 5000);
+  }
 }
 
 // ★ 修正H: エラー時にユーザーへトースト通知を追加（旧: console.error のみでUIが空白のまま）
@@ -1423,6 +1447,7 @@ function renderMood(data){
 
     const btn = document.createElement("button");
     btn.textContent = "これ！";
+    btn.dataset.mood = m.mood;  // ★ 押されたボタンを特定するために追加
     // ★ addEventListener でクロージャに m.mood を安全に保持
     btn.addEventListener("click", () => voteMood(m.mood));
 
