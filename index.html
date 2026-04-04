@@ -103,26 +103,20 @@ h3{ font-size:4vw; margin-bottom:2vw; }
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(255,138,0,0.15);
+  background: rgba(255,138,0,0.1);
   border-radius: 3vw;
   pointer-events: none;
 }
-.placeSummary.submitting .placeCardSpinner {
-  display: flex !important;
-}
+/* ★ 投票ボタン内スピナー（処理中に「投票 ›」と差し替え） */
 .placeCardSpinner {
-  display: none;
-  position: absolute;
-  right: 3vw;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 6vw;
-  height: 6vw;
-  border: 0.8vw solid rgba(255,138,0,0.3);
-  border-top-color: #FF8A00;
+  display: inline-block;
+  width: 3.5vw;
+  height: 3.5vw;
+  border: 0.6vw solid rgba(255,255,255,0.4);
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spinnerRotate 0.7s linear infinite;
-  pointer-events: none;
+  vertical-align: middle;
 }
 .placeSummary button{
   margin-right:3vw;
@@ -1107,22 +1101,42 @@ function _hideVoteSpinner() {
   if (goSpinner)   goSpinner.classList.remove("btnSpinnerActive");
 }
 
-/* ★ 施設カードの処理中オーバーレイを表示・非表示（楽観的UI用） */
+/* ★ 施設カードの処理中表示（投票ボタンをスピナーに切り替え） */
 function _showCardSpinner(placeName) {
   if (!placeName) return;
   const safeId = placeName.replace(/[^a-zA-Z0-9_-]/g, "_");
   const card = document.getElementById("row_" + safeId);
-  if (card) card.classList.add("submitting");
+  if (!card) return;
+  card.classList.add("submitting");
+  // ボタンをスピナーに切り替え
+  const btn = card.querySelector("button");
+  if (btn) {
+    btn.dataset.origText = btn.innerHTML;
+    btn.innerHTML = "<span class='placeCardSpinner'></span>";
+    btn.disabled = true;
+  }
 }
 function _hideCardSpinner(placeName) {
   if (!placeName) return;
   const safeId = placeName.replace(/[^a-zA-Z0-9_-]/g, "_");
   const card = document.getElementById("row_" + safeId);
-  if (card) card.classList.remove("submitting");
+  if (!card) return;
+  card.classList.remove("submitting");
+  const btn = card.querySelector("button");
+  if (btn && btn.dataset.origText) {
+    btn.innerHTML = btn.dataset.origText;
+    btn.disabled = false;
+  }
 }
 function _hideAllCardSpinners() {
-  document.querySelectorAll(".placeSummary.submitting")
-    .forEach(el => el.classList.remove("submitting"));
+  document.querySelectorAll(".placeSummary.submitting").forEach(card => {
+    card.classList.remove("submitting");
+    const btn = card.querySelector("button");
+    if (btn && btn.dataset.origText) {
+      btn.innerHTML = btn.dataset.origText;
+      btn.disabled = false;
+    }
+  });
 }
 
 /* ★ getTodayAgeとgetWardListが両方完了したら区を自動選択してloadPlaces */
@@ -1688,18 +1702,16 @@ function _drawPlaceList(placeList, todayCounts, allAges, payload){
 
     div.appendChild(info);
 
-    // ── 投票ボタン
+    // ── 投票ボタン（処理中はスピナーに切り替わる）
     const voteBtn = document.createElement("button");
-    voteBtn.style.cssText = "flex-shrink:0; background:#FF8A00; color:white; border:none; padding:1.6vw 3.5vw; border-radius:2.5vw; font-size:3.5vw; white-space:nowrap;";
-    voteBtn.textContent = "投票 ›";
+    voteBtn.style.cssText = "flex-shrink:0; background:#FF8A00; color:white; border:none; padding:1.6vw 3.5vw; border-radius:2.5vw; font-size:3.5vw; white-space:nowrap; min-width:14vw; text-align:center;";
+    voteBtn.innerHTML = "投票 ›";
     // ★ addEventListener でクロージャにより placeName を安全に保持
     voteBtn.addEventListener("click", () => openVoteModal(placeName));
     div.appendChild(voteBtn);
 
-    // ★ 施設カード処理中スピナー（楽観的UI用）
-    const cardSpinner = document.createElement("span");
-    cardSpinner.className = "placeCardSpinner";
-    div.appendChild(cardSpinner);
+    // ★ 施設カード処理中スピナー用（不要になったので削除）
+    // スピナーはvoteBtn.innerHTMLを直接切り替えて表示する
 
     // ── 年齢帯ミニ行（施設）
     if (ageData) {
