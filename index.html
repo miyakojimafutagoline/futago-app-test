@@ -96,6 +96,33 @@ h3{ font-size:4vw; margin-bottom:2vw; }
   border-radius:3vw;
   border:1px solid #E5E5E5;
   box-shadow:0 1vw 2vw rgba(0,0,0,0.05);
+  position: relative;  /* ★ オーバーレイ用 */
+}
+/* ★ 施設カード処理中オーバーレイ */
+.placeSummary.submitting::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255,138,0,0.15);
+  border-radius: 3vw;
+  pointer-events: none;
+}
+.placeSummary.submitting .placeCardSpinner {
+  display: flex !important;
+}
+.placeCardSpinner {
+  display: none;
+  position: absolute;
+  right: 3vw;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6vw;
+  height: 6vw;
+  border: 0.8vw solid rgba(255,138,0,0.3);
+  border-top-color: #FF8A00;
+  border-radius: 50%;
+  animation: spinnerRotate 0.7s linear infinite;
+  pointer-events: none;
 }
 .placeSummary button{
   margin-right:3vw;
@@ -1080,6 +1107,24 @@ function _hideVoteSpinner() {
   if (goSpinner)   goSpinner.classList.remove("btnSpinnerActive");
 }
 
+/* ★ 施設カードの処理中オーバーレイを表示・非表示（楽観的UI用） */
+function _showCardSpinner(placeName) {
+  if (!placeName) return;
+  const safeId = placeName.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const card = document.getElementById("row_" + safeId);
+  if (card) card.classList.add("submitting");
+}
+function _hideCardSpinner(placeName) {
+  if (!placeName) return;
+  const safeId = placeName.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const card = document.getElementById("row_" + safeId);
+  if (card) card.classList.remove("submitting");
+}
+function _hideAllCardSpinners() {
+  document.querySelectorAll(".placeSummary.submitting")
+    .forEach(el => el.classList.remove("submitting"));
+}
+
 /* ★ getTodayAgeとgetWardListが両方完了したら区を自動選択してloadPlaces */
 function _tryAutoLoadPlaces() {
   if (!_wardListReady || !_todayAgeReady) return;
@@ -1651,6 +1696,11 @@ function _drawPlaceList(placeList, todayCounts, allAges, payload){
     voteBtn.addEventListener("click", () => openVoteModal(placeName));
     div.appendChild(voteBtn);
 
+    // ★ 施設カード処理中スピナー（楽観的UI用）
+    const cardSpinner = document.createElement("span");
+    cardSpinner.className = "placeCardSpinner";
+    div.appendChild(cardSpinner);
+
     // ── 年齢帯ミニ行（施設）
     if (ageData) {
       // ★ 修正C: オプショナルチェーニング（?.）で存在しないキーへのアクセスを安全に
@@ -1841,12 +1891,14 @@ function submitVote(time){
   _todayPlace = place;
   _todayWard  = ward;
   _setTravelChoice("go");
-  _showVoteSpinner("go");  // ★ 送信中スピナー表示
+  _showVoteSpinner("go");       // ★ ボタンスピナー表示
+  _showCardSpinner(place);      // ★ 施設カードオーバーレイ表示
 
   callGAS("registerVoteAndRefresh", userId, place, time, age, ward)
     .then(payload => {
       _isSubmitting = false;
-      _hideVoteSpinner();  // ★ スピナー非表示
+      _hideVoteSpinner();        // ★ ボタンスピナー非表示
+      _hideAllCardSpinners();    // ★ 施設カードオーバーレイ非表示
       // GAS完了後に実データでカウントを更新
       const { todayCounts, allAges } = payload;
       const stayHome2   = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
@@ -1860,7 +1912,8 @@ function submitVote(time){
     .catch(err => {
       // ★ 失敗時はUIを元の状態に戻す
       _isSubmitting = false;
-      _hideVoteSpinner();  // ★ スピナー非表示
+      _hideVoteSpinner();        // ★ ボタンスピナー非表示
+      _hideAllCardSpinners();    // ★ 施設カードオーバーレイ非表示
       _todayPlace = prevPlace;
       _todayWard  = prevWard;
       _setTravelChoice(prevChoice);
@@ -1889,12 +1942,14 @@ function cancelVote(placeName) {
   _todayPlace = "出かける";
   _todayWard  = ward;
   _setTravelChoice("go");
-  _showVoteSpinner("go");  // ★ 送信中スピナー表示
+  _showVoteSpinner("go");       // ★ ボタンスピナー表示
+  _showCardSpinner(prevPlace);  // ★ 取消中の施設カードにオーバーレイ表示
 
   callGAS("registerVoteAndRefresh", userId, "出かける", "未定", age, ward)
     .then(payload => {
       _isSubmitting = false;
-      _hideVoteSpinner();  // ★ スピナー非表示
+      _hideVoteSpinner();        // ★ ボタンスピナー非表示
+      _hideAllCardSpinners();    // ★ 施設カードオーバーレイ非表示
       const { todayCounts, allAges } = payload;
       const stayHome   = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
       const goOutTotal = payload.goOutTotal || 0;
@@ -1906,7 +1961,8 @@ function cancelVote(placeName) {
     .catch(err => {
       // ★ 失敗時はUIを元の状態に戻す
       _isSubmitting = false;
-      _hideVoteSpinner();  // ★ スピナー非表示
+      _hideVoteSpinner();        // ★ ボタンスピナー非表示
+      _hideAllCardSpinners();    // ★ 施設カードオーバーレイ非表示
       _todayPlace = prevPlace;
       _todayWard  = prevWard;
       _setTravelChoice(prevChoice);
