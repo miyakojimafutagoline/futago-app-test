@@ -394,6 +394,8 @@ h3{ font-size:4vw; margin-bottom:2vw; }
               border-radius:2vw;
               border:1px solid #E5E5E5;
               background:#FFF;
+              -webkit-appearance:menulist;
+              appearance:auto;
             ">
               <option value="">年齢を選んでください</option>
               <option value="🍼0-1">🍼 0〜1歳</option>
@@ -572,7 +574,7 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
             <!-- 区プルダウン（お気に入りボタンは将来復活用にコメントアウト） -->
             <div style="margin-bottom:0;">
-              <select id="wardSelect" onchange="loadPlaces()" class="inputBox" style="width:100%;">
+              <select id="wardSelect" onchange="loadPlaces()" class="inputBox" style="width:100%; -webkit-appearance:menulist; appearance:auto;">
                 <option value="">区を選択してください</option>
               </select>
               <!-- <button id="favAddBtn" class="actionBtn" onclick="toggleFav()">
@@ -667,6 +669,8 @@ h3{ font-size:4vw; margin-bottom:2vw; }
         border-radius:2vw;
         border:1px solid #E5E5E5;
         background:#FFF;
+        -webkit-appearance:menulist;
+        appearance:auto;
       ">
         <option value="">年齢を選んでください</option>
         <option value="🍼0-1">🍼 0〜1歳</option>
