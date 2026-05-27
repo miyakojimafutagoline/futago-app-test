@@ -869,15 +869,23 @@ function filterPlaces(){
 }
 
 /* ローディング制御 */
+// ★ loadingOverlay の参照を保持（remove後も参照できるように）
+const _loadingOverlayEl = document.getElementById("loadingOverlay");
+
 function showLoading(){
-  const el = document.getElementById("loadingOverlay");
-  el.style.pointerEvents = "auto";
-  el.style.display = "flex";
+  // ★ Android LINE WebView対策: display:noneでもタッチを奪うバグを回避するため
+  // DOMから完全に除去→再追加する方式に変更
+  if (!document.getElementById("loadingOverlay")) {
+    document.body.appendChild(_loadingOverlayEl);
+  }
+  _loadingOverlayEl.style.display = "flex";
 }
 function hideLoading(){
-  const el = document.getElementById("loadingOverlay");
-  el.style.display = "none";
-  el.style.pointerEvents = "none";
+  _loadingOverlayEl.style.display = "none";
+  // ★ DOMから完全に除去してタッチブロックを確実に解除
+  if (_loadingOverlayEl.parentNode) {
+    _loadingOverlayEl.parentNode.removeChild(_loadingOverlayEl);
+  }
 }
 
 /* ★ 二重タップ防止フラグ */
@@ -1657,7 +1665,11 @@ if (instaUrl){
 
   document.getElementById("detailIcons").innerHTML = icons;
 
-  document.getElementById("detailModal").style.display = "block";
+  // ★ Android LINE WebView対策: remove/appendChild方式
+  if (!document.getElementById("detailModal")) {
+    document.body.appendChild(_detailModalEl);
+  }
+  _detailModalEl.style.display = "block";
 
     // ★ 年齢帯内訳を読み込む
   callGAS("getAgeBreakdown", name)
@@ -1667,17 +1679,28 @@ if (instaUrl){
 }
 
 function closeDetailModal(){
-  document.getElementById("detailModal").style.display = "none";
+  _detailModalEl.style.display = "none";
+  if (_detailModalEl.parentNode) _detailModalEl.parentNode.removeChild(_detailModalEl);
 }
 
 /* モーダル制御（投票） */
+// ★ 各モーダルの参照を保持
+const _voteModalEl     = document.getElementById("voteModal");
+const _addPlaceModalEl = document.getElementById("addPlaceModal");
+const _detailModalEl   = document.getElementById("detailModal");
+
 function openVoteModal(place){
   currentPlace = sanitizePlace(place);
   document.getElementById("modalPlace").innerText = currentPlace;
-  document.getElementById("voteModal").style.display = "block";
+  // ★ Android LINE WebView対策: remove/appendChild方式
+  if (!document.getElementById("voteModal")) {
+    document.body.appendChild(_voteModalEl);
+  }
+  _voteModalEl.style.display = "block";
 }
 function closeVoteModal(){
-  document.getElementById("voteModal").style.display = "none";
+  _voteModalEl.style.display = "none";
+  if (_voteModalEl.parentNode) _voteModalEl.parentNode.removeChild(_voteModalEl);
 }
 
 /* ★ 行き先追加モーダル */
@@ -1688,10 +1711,15 @@ function openAddPlaceModal(){
     return false;
   }
   document.getElementById("addPlaceWardLabel").innerText = "区：" + ward;
-  document.getElementById("addPlaceModal").style.display = "block";
+  // ★ Android LINE WebView対策: remove/appendChild方式
+  if (!document.getElementById("addPlaceModal")) {
+    document.body.appendChild(_addPlaceModalEl);
+  }
+  _addPlaceModalEl.style.display = "block";
 }
 function closeAddPlaceModal(){
-  document.getElementById("addPlaceModal").style.display = "none";
+  _addPlaceModalEl.style.display = "none";
+  if (_addPlaceModalEl.parentNode) _addPlaceModalEl.parentNode.removeChild(_addPlaceModalEl);
 }
 
 /* ★ 行き先追加処理 */
