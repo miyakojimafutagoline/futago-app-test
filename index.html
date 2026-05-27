@@ -3,15 +3,6 @@
 <head>
 <base target="_top">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<!-- ★ PWA対応 -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#FF8A00">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="ふたごアプリ">
-<link rel="apple-touch-icon" href="icon-192.png">
-
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
@@ -401,6 +392,8 @@ h3{ font-size:4vw; margin-bottom:2vw; }
               border-radius:2vw;
               border:1px solid #E5E5E5;
               background:#FFF;
+              -webkit-appearance: menulist;
+              appearance: auto;
             ">
               <option value="">年齢を選んでください</option>
               <option value="🍼0-1">🍼 0〜1歳</option>
@@ -579,7 +572,7 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
             <!-- 区プルダウン（お気に入りボタンは将来復活用にコメントアウト） -->
             <div class="row" style="margin-bottom:0;">
-              <select id="wardSelect" onchange="loadPlaces()" class="inputBox" style="width:100%;">
+              <select id="wardSelect" onchange="loadPlaces()" class="inputBox" style="width:100%; -webkit-appearance: menulist; appearance: auto;">
                 <option value="">区を選択してください</option>
               </select>
               <!-- <button id="favAddBtn" class="actionBtn" onclick="toggleFav()">
@@ -674,6 +667,8 @@ h3{ font-size:4vw; margin-bottom:2vw; }
         border-radius:2vw;
         border:1px solid #E5E5E5;
         background:#FFF;
+        -webkit-appearance: menulist;
+        appearance: auto;
       ">
         <option value="">年齢を選んでください</option>
         <option value="🍼0-1">🍼 0〜1歳</option>
@@ -1947,12 +1942,6 @@ function renderAgeBreakdown(data){
 
 
 init();
-
-// ★ PWA: Service Worker を登録
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js')
-    .catch(err => console.log('SW登録失敗:', err));
-}
 </script>
 
   <!-- ★ トースト通知 -->
