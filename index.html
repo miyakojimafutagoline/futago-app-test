@@ -363,8 +363,8 @@ h3{ font-size:4vw; margin-bottom:2vw; }
     ">
 
       <!-- STEP1 -->
-      <div style="margin-bottom:4vw; display:flex; gap:2vw;">
-        <div style="width:1vw; background:#FF8A00; border-radius:1vw;"></div>
+      <div style="margin-bottom:2vw; display:flex; gap:2vw;">
+        <div style="width:1vw; background:#FF8A00; border-radius:1vw; flex-shrink:0;"></div>
         <div>
           <div style="font-size:3vw; color:#888; margin-bottom:1vw;">
             同じ年齢帯の人数を表示するために必要です
@@ -372,47 +372,42 @@ h3{ font-size:4vw; margin-bottom:2vw; }
           <div style="font-size:4.4vw; font-weight:bold; margin-bottom:1vw;">
             💡 多胎児の年齢帯を教えてね
           </div>
-
-          <!-- ★ 年齢帯プルダウン（ひきこもりの上に追加） -->
-          <div id="ageSelectArea" style="
-            margin-bottom:3vw;
-            background:#FFFFFF;
-            padding:2.5vw 3vw;
-            border-radius:2vw;
-            border:1px solid #E5E5E5;
-            font-size:3.8vw;
-          ">
-            <!--
-            <label for="ageSelect" style="display:block; margin-bottom:1vw; color:#555;">
-              お子さんの年齢帯
-            </label>
-            -->
-            <select id="ageSelect" style="
-              width:100%;
-              font-size:4vw;
-              padding:2vw;
-              border-radius:2vw;
-              border:1px solid #E5E5E5;
-              background:#FFF;
-              -webkit-appearance:menulist;
-              appearance:auto;
-            ">
-              <option value="">年齢を選んでください</option>
-              <option value="🍼0-1">🍼 0〜1歳</option>
-              <option value="🐤2-3">🐤 2〜3歳</option>
-              <option value="📛未就学">📛 未就学</option>
-              <option value="🏫小学生以上">🏫 小学生以上</option>
-            </select>
-
-            <!-- ★ 兄弟児についての注記 -->
-            <div style="font-size:2.8vw; color:#aaa; margin-top:2vw; line-height:1.5;">
-              ※ 多胎児同士で出会える機会づくりを目的としています。<br>
-              ※ 年齢は多胎児のお子さんのみ選択してください（兄弟姉妹は対象外です🙏）
-            </div>
-
-          </div><!-- /ageSelectArea -->
         </div>
       </div>
+
+      <!-- ★ 年齢帯プルダウン（flexの外に独立配置 → Android LINE WebView対策） -->
+      <div id="ageSelectArea" style="
+        margin-bottom:3vw;
+        background:#FFFFFF;
+        padding:2.5vw 3vw;
+        border-radius:2vw;
+        border:1px solid #E5E5E5;
+        font-size:3.8vw;
+      ">
+        <select id="ageSelect" style="
+          width:100%;
+          font-size:4vw;
+          padding:2vw;
+          border-radius:2vw;
+          border:1px solid #E5E5E5;
+          background:#FFF;
+          -webkit-appearance:menulist;
+          appearance:auto;
+        ">
+          <option value="">年齢を選んでください</option>
+          <option value="🍼0-1">🍼 0〜1歳</option>
+          <option value="🐤2-3">🐤 2〜3歳</option>
+          <option value="📛未就学">📛 未就学</option>
+          <option value="🏫小学生以上">🏫 小学生以上</option>
+        </select>
+
+        <!-- ★ 兄弟児についての注記 -->
+        <div style="font-size:2.8vw; color:#aaa; margin-top:2vw; line-height:1.5;">
+          ※ 多胎児同士で出会える機会づくりを目的としています。<br>
+          ※ 年齢は多胎児のお子さんのみ選択してください（兄弟姉妹は対象外です🙏）
+        </div>
+
+      </div><!-- /ageSelectArea -->
 
       <hr style="border:none; border-top:1px solid #E5E5E5; margin:3vw 0;">
 
