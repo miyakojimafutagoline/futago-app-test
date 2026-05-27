@@ -3,6 +3,15 @@
 <head>
 <base target="_top">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- ★ PWA対応 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FF8A00">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ふたごアプリ">
+<link rel="apple-touch-icon" href="icon-192.png">
+
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
@@ -96,27 +105,6 @@ h3{ font-size:4vw; margin-bottom:2vw; }
   border-radius:3vw;
   border:1px solid #E5E5E5;
   box-shadow:0 1vw 2vw rgba(0,0,0,0.05);
-  position: relative;  /* ★ オーバーレイ用 */
-}
-/* ★ 施設カード処理中オーバーレイ */
-.placeSummary.submitting::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(255,138,0,0.1);
-  border-radius: 3vw;
-  pointer-events: none;
-}
-/* ★ 投票ボタン内スピナー（処理中に「投票 ›」と差し替え） */
-.placeCardSpinner {
-  display: inline-block;
-  width: 3.5vw;
-  height: 3.5vw;
-  border: 0.6vw solid rgba(255,255,255,0.4);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spinnerRotate 0.7s linear infinite;
-  vertical-align: middle;
 }
 .placeSummary button{
   margin-right:3vw;
@@ -296,36 +284,6 @@ h3{ font-size:4vw; margin-bottom:2vw; }
   box-shadow:0 0 10px rgba(0,0,0,0.2);
 }
 
-/* ★ 送信中スピナー（楽観的UI用） */
-@keyframes spinnerRotate {
-  to { transform: rotate(360deg); }
-}
-.btnSpinner {
-  display: none;
-  width: 5vw;
-  height: 5vw;
-  border: 0.7vw solid rgba(255,255,255,0.4);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spinnerRotate 0.7s linear infinite;
-  flex-shrink: 0;
-}
-/* ひきこもりボタン用：オレンジ背景になった後なので白スピナー */
-.btnSpinner.orange {
-  border-color: rgba(255,255,255,0.4);
-  border-top-color: #ffffff;
-}
-.btnSpinnerActive { display: block !important; }
-
-/* ★ カウント数字のフェード更新アニメーション */
-@keyframes countFadeIn {
-  from { opacity: 0.2; transform: scale(0.85); }
-  to   { opacity: 1;   transform: scale(1); }
-}
-.countUpdated {
-  animation: countFadeIn 0.35s ease-out;
-}
-
 .goOutGuide{
   background:#FFFFFF;
   padding:2.5vw 3vw;
@@ -499,7 +457,6 @@ h3{ font-size:4vw; margin-bottom:2vw; }
               ">
                 <span>今日はひきこもり</span>
                 <span id="stayHomeCount" style="font-size:3.2vw; color:inherit; font-weight:bold;"></span>
-                <span id="stayHomeSpinner" class="btnSpinner orange"></span>
               </button>
               <!-- 年齢帯別人数：ひきこもりボタンの真下・同幅 -->
               <div id="stayHomeAgeArea" style="
@@ -541,7 +498,6 @@ h3{ font-size:4vw; margin-bottom:2vw; }
               ">
                 <span>出かける/迷ってる</span>
                 <span id="goOutCount" style="font-size:3.2vw; color:inherit; font-weight:bold;"></span>
-                <span id="goOutSpinner" class="btnSpinner"></span>
               </button>
               <!-- 年齢帯別人数：出かけるボタンの真下・同幅 -->
               <div id="goOutAgeArea" style="
@@ -843,12 +799,8 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
 <script>
 // ★ GASのエンドポイントURL（デプロイ後に更新不要）
-/* 本番用 */
-//const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
 
-/*テスト用*/
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwdwU_Tc1gjiyPE8_OeEp0LcPONu6AzyL9mbup6IlsHzd8_kUugETC5vihVbB9MEm9KrA/exec";   
-   
 // ★ NS-04対策：共有秘密キー
 // GAS（コードds）の APP_SECRET と必ず同じ値にすること
 // この値は外部に漏らさないでください
@@ -867,12 +819,7 @@ async function callGAS(action, ...args) {
     body: JSON.stringify({ action, args, secret: APP_SECRET })
   });
   if (!res.ok) throw new Error("HTTP " + res.status);
-  const data = await res.json();
-  // ★ NS-01修正: GASがHTTP 200でもerrorフィールドを返す場合がある
-  // 例: シートが見つからない・認証エラー・Unknown action など
-  // errorをthrowすることで呼び出し元の.catch()/_onGasError()が正しく動く
-  if (data && data.error) throw new Error(data.error);
-  return data;
+  return res.json();
 }
 
 let lastScrollPos = 0;
@@ -941,7 +888,7 @@ function _onGasError(err){
   _isSubmitting = false;
   _isMoodSubmitting = false; // 気分投票中のエラー時もリセット
   const msg = (err && err.message) ? err.message : "通信エラーが発生しました。";
-  showToast("⚠️ " + msg + " 画面を閉じて開き直してください。", "error", 5000);
+  showToast("⚠️ " + msg + " ページを再読み込みしてお試しください。", "error", 4000);
 }
 
 
@@ -1029,114 +976,37 @@ async function submitGoOut(){
     return;
   }
 
+  showLoading();
   _isSubmitting = true;
-  const ward = document.getElementById("wardSelect").value;
 
-  // ★ 楽観的UI: GAS完了を待たずに即座にUIを切り替える
-  const prevPlace  = _todayPlace;
-  const prevWard   = _todayWard;
-  const prevChoice = document.querySelector(".travelChoice.active")?.dataset?.choice || "";
-  _setTravelChoice("go");
-  _todayPlace = "出かける";
-  _todayWard  = ward;
-  _showVoteSpinner("go");  // ★ 送信中スピナー表示
-  setTimeout(() => {
-    const target = document.getElementById("wardSelect");
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, 150);
+  const ward = document.getElementById("wardSelect").value;
 
   try {
     const payload = await callGAS("registerVoteAndRefresh", userId, "出かける", "未定", age, ward);
     _isSubmitting = false;
-    _hideVoteSpinner();  // ★ スピナー非表示
-    // GAS完了後に実データでカウントを更新
+    _setTravelChoice("go"); // GAS成功後にUIを切替（失敗時は元の状態を維持）
     const { todayCounts } = payload;
     const stayHomeCount2 = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
     const goOutTotal3 = payload.goOutTotal || 0;
     _updateTravelCounts(stayHomeCount2, goOutTotal3);
     _renderStayHomeAge(payload.allAges, stayHomeCount2);
     _renderGoOutAgeTotal(payload.goOutAgeTotal || null, goOutTotal3);
+    _todayPlace = "出かける";
+    _todayWard  = ward;
     _renderFromPayload(payload);
-  } catch(err) {
-    // ★ 失敗時はUIを元の状態に戻す
-    _isSubmitting = false;
-    _hideVoteSpinner();  // ★ スピナー非表示
-    _todayPlace = prevPlace;
-    _todayWard  = prevWard;
-    _setTravelChoice(prevChoice);
-    showToast("⚠️ 投票の送信に失敗しました。画面を閉じて開き直してください。", "error", 5000);
-  }
+    setTimeout(() => {
+      const target = document.getElementById("wardSelect");
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+  } catch(err) { _isSubmitting = false; _onGasError(err); }
 }
 
 /* ★ ひきこもり・出かけるカウント表示を更新（0なら非表示） */
 function _updateTravelCounts(stayHome, goOut) {
   const stayEl = document.getElementById("stayHomeCount");
   const goEl   = document.getElementById("goOutCount");
-  if (stayEl) {
-    stayEl.innerText = stayHome > 0 ? "🏠" + stayHome : "";
-    stayEl.classList.remove("countUpdated");
-    void stayEl.offsetWidth; // reflow で animation リセット
-    stayEl.classList.add("countUpdated");
-  }
-  if (goEl) {
-    goEl.innerText = goOut > 0 ? "👣" + goOut : "";
-    goEl.classList.remove("countUpdated");
-    void goEl.offsetWidth;
-    goEl.classList.add("countUpdated");
-  }
-}
-
-/* ★ 送信中スピナーの表示・非表示（楽観的UI用） */
-function _showVoteSpinner(choice) {
-  // choice: "stay"=ひきこもり側, "go"=出かける側
-  const staySpinner = document.getElementById("stayHomeSpinner");
-  const goSpinner   = document.getElementById("goOutSpinner");
-  if (staySpinner) staySpinner.classList.toggle("btnSpinnerActive", choice === "stay");
-  if (goSpinner)   goSpinner.classList.toggle("btnSpinnerActive", choice === "go");
-}
-function _hideVoteSpinner() {
-  const staySpinner = document.getElementById("stayHomeSpinner");
-  const goSpinner   = document.getElementById("goOutSpinner");
-  if (staySpinner) staySpinner.classList.remove("btnSpinnerActive");
-  if (goSpinner)   goSpinner.classList.remove("btnSpinnerActive");
-}
-
-/* ★ 施設カードの処理中表示（投票ボタンをスピナーに切り替え） */
-function _showCardSpinner(placeName) {
-  if (!placeName) return;
-  const safeId = placeName.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const card = document.getElementById("row_" + safeId);
-  if (!card) return;
-  card.classList.add("submitting");
-  // ボタンをスピナーに切り替え
-  const btn = card.querySelector("button");
-  if (btn) {
-    btn.dataset.origText = btn.innerHTML;
-    btn.innerHTML = "<span class='placeCardSpinner'></span>";
-    btn.disabled = true;
-  }
-}
-function _hideCardSpinner(placeName) {
-  if (!placeName) return;
-  const safeId = placeName.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const card = document.getElementById("row_" + safeId);
-  if (!card) return;
-  card.classList.remove("submitting");
-  const btn = card.querySelector("button");
-  if (btn && btn.dataset.origText) {
-    btn.innerHTML = btn.dataset.origText;
-    btn.disabled = false;
-  }
-}
-function _hideAllCardSpinners() {
-  document.querySelectorAll(".placeSummary.submitting").forEach(card => {
-    card.classList.remove("submitting");
-    const btn = card.querySelector("button");
-    if (btn && btn.dataset.origText) {
-      btn.innerHTML = btn.dataset.origText;
-      btn.disabled = false;
-    }
-  });
+  if (stayEl) stayEl.innerText = stayHome > 0 ? "🏠" + stayHome : "";
+  if (goEl)   goEl.innerText   = goOut   > 0 ? "👣" + goOut   : "";
 }
 
 /* ★ getTodayAgeとgetWardListが両方完了したら区を自動選択してloadPlaces */
@@ -1178,11 +1048,7 @@ function showToast(msg, type, duration) {
 
 /* 初期化 */
 function init(){
-   /*本番*/
-  //const LIFF_ID = "2009349674-TujIMf4h";
-   /*test */
-  const LIFF_ID = "2009349674-MdsFU5pu";
-
+  const LIFF_ID = "2009349674-TujIMf4h";
 
   liff.init({
     liffId: LIFF_ID,
@@ -1226,116 +1092,105 @@ async function _initApp(){
     "こんにちは " + userName + " さん👋";
   document.getElementById("app").style.display = "block";
 
-  // ★ 起動案内を非表示
+  // ★ 起動案内を非表示（アプリが正常に起動できたタイミングで消す）
   const notice = document.getElementById("loadingNotice");
   if (notice) notice.style.display = "none";
 
   // placeTabを初期表示
   document.getElementById("placeTab").style.display = "block";
 
-  // ★ データ取得中は「更新中」を表示（タイトルだけ出て止まる問題を解消）
-  showLoading();
 
-  // 閲覧登録（結果不要・独立して実行）
+  // 閲覧登録（結果不要）
   callGAS("registerView", userId).catch(e => console.error("registerView:", e));
 
-  // ★ NS-02修正: getInitPayloadで一括取得（旧設計: 6回のGAS呼び出し → 1回に削減）
-  //   取得内容: todayCounts / allAges / goOutTotal / goOutAgeTotal /
-  //             wardList / todayAge / viewCount / moodCounts /
-  //             yesterdayVote / alreadyReported
-  try {
-    const init = await callGAS("getInitPayload", userId);
-
-    // ① 年齢帯・投票先を復元
-    const todayAge = init.todayAge;
-    if (todayAge && todayAge.age) {
-      const sel = document.getElementById("ageSelect");
-      if (sel) sel.value = todayAge.age;
-    }
-    if (todayAge && todayAge.place) {
-      if (todayAge.place === "引きこもり") {
-        _setTravelChoice("stay");
-      } else {
-        _setTravelChoice("go");
-        _todayPlace = todayAge.place;
-        _todayWard  = todayAge.ward || "";
+  // 今日の年齢帯・投票先を復元
+  callGAS("getTodayAge", userId)
+    .then(data => {
+      if (data && data.age) {
+        const sel = document.getElementById("ageSelect");
+        if (sel) sel.value = data.age;
       }
-    }
-    if (todayAge && !todayAge.place && todayAge.ward) {
-      _todayWard = todayAge.ward;
-    }
-    _todayAgeReady = true;
+      if (data && data.place) {
+        if (data.place === "引きこもり") {
+          _setTravelChoice("stay");
+        } else {
+          _setTravelChoice("go");
+          _todayPlace = data.place;
+          _todayWard  = data.ward || "";
+        }
+      }
+      if (data && !data.place && data.ward) {
+        _todayWard = data.ward;
+      }
+      _todayAgeReady = true;
+      _tryAutoLoadPlaces();
+    })
+    .catch(err => { console.error("getTodayAge:", err); _todayAgeReady = true; });
 
-    // ★ データ取得完了 → ローディング解除してから画面を組み立てる
-    hideLoading();
+  loadMoodCounts();
+  initFeedbackCard();
 
-    // ② ひきこもり・出かけるカウント表示
-    const { todayCounts, allAges, goOutTotal, goOutAgeTotal } = init;
-    const stayHome = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
-    _updateTravelCounts(stayHome, goOutTotal || 0);
-    _renderStayHomeAge(allAges, stayHome);
-    _renderGoOutAgeTotal(goOutAgeTotal || null, goOutTotal || 0);
+  // ひきこもり・出かける人数＋年齢帯を取得
+  callGAS("getTodayCounts")
+    .then(counts => {
+      const stayHome = (counts["引きこもり"] && counts["引きこもり"]["なし"]) || 0;
+      const goOut    = (counts["出かける"]   && counts["出かける"]["未定"])   || 0;
+      _updateTravelCounts(stayHome, goOut);
 
-    // ③ 区プルダウン
-    const sel = document.getElementById("wardSelect");
-    sel.innerHTML = '<option value="">区を選択してください</option>';
-    (init.wardList || []).forEach(w => {
-      const opt = document.createElement("option");
-      opt.value = w;
-      opt.textContent = w;
-      sel.appendChild(opt);
-    });
-    _wardListReady = true;
+      callGAS("getAllAgeBreakdowns")
+        .then(allAges => {
+          setTimeout(() => {
+            _renderStayHomeAge(allAges, stayHome);
+            let goOutTotal4 = 0;
+            const goOutAgeTotal4 = { "🍼0-1": 0, "🐤2-3": 0, "📛未就学": 0, "🏫小学生以上": 0 };
+            for (const place in allAges) {
+              if (place === "引きこもり") continue;
+              for (const t in allAges[place]) {
+                for (const cat in allAges[place][t]) {
+                  if (goOutAgeTotal4[cat] !== undefined) {
+                    goOutAgeTotal4[cat] += allAges[place][t][cat];
+                  }
+                }
+              }
+            }
+            for (const place in counts) {
+              if (place === "引きこもり") continue;
+              const times = counts[place];
+              for (const t in times) goOutTotal4 += times[t];
+            }
+            _updateTravelCounts(stayHome, goOutTotal4);
+            _renderGoOutAgeTotal(goOutAgeTotal4, goOutTotal4);
+          }, 800);
+        })
+        .catch(err => console.error("getAllAgeBreakdowns:", err));
+    })
+    .catch(err => console.error("getTodayCounts:", err));
 
-    // ④ 閲覧数
-    document.getElementById("viewCount").innerText =
-      "👀 今日このページを見たママパパ " + (init.viewCount || 0) + "人";
+  // 閲覧数
+  callGAS("getTodayViewCount")
+    .then(n => {
+      document.getElementById("viewCount").innerText =
+        "👀 今日このページを見たママパパ " + n + "人";
+    })
+    .catch(err => console.error("getTodayViewCount:", err));
 
-    // ⑤ 気分タブ
-    renderMood(init.moodCounts);
-
-    // ⑥ フィードバックカード
-    const vote = init.yesterdayVote;
-    if (vote && !init.alreadyReported) {
-      _feedbackPlace = vote.place;
-      _feedbackWard  = vote.ward;
-      const feedbackMsg = vote.place === "出かける"
-        ? "🚶 昨日お出かけの予定でしたが、多胎家庭と会えましたか？"
-        : "📍 昨日「" + vote.place + "」に行く予定でしたが、多胎家庭と会えましたか？";
-      document.getElementById("feedbackText").innerText = feedbackMsg;
-      document.getElementById("feedbackCard").style.display = "block";
-    }
-
-    // ⑦ 区の自動選択（wardList・todayAge両方揃ったので実行）
-    _tryAutoLoadPlaces();
-
-  } catch (err) {
-    console.error("getInitPayload:", err);
-    hideLoading(); // ★ 失敗時もローディングを解除
-    // getInitPayload失敗時のフォールバック：区一覧だけ個別取得してアプリを継続
-    _todayAgeReady = true;
-    callGAS("getWardList")
-      .then(wards => {
-        const sel = document.getElementById("wardSelect");
-        sel.innerHTML = '<option value="">区を選択してください</option>';
-        (wards || []).forEach(w => {
-          const opt = document.createElement("option");
-          opt.value = w;
-          opt.textContent = w;
-          sel.appendChild(opt);
-        });
-        _wardListReady = true;
-        _tryAutoLoadPlaces();
-      })
-      .catch(e => {
-        showToast("⚠️ 初期データの読み込みに失敗しました。ページを再読み込みしてください。", "error", 4000);
-        console.error("getWardList fallback:", e);
+  // 区一覧
+  callGAS("getWardList")
+    .then(wards => {
+      const sel = document.getElementById("wardSelect");
+      sel.innerHTML = '<option value="">区を選択してください</option>';
+      wards.forEach(w => {
+        sel.innerHTML += `<option value="${w}">${w}</option>`;
       });
-  }
+      _wardListReady = true;
+      _tryAutoLoadPlaces();
+    })
+    .catch(err => {
+      showToast("⚠️ 区一覧の読み込みに失敗しました。ページを再読み込みしてください。", "error", 4000);
+      console.error("getWardList:", err);
+    });
 }// ← _initApp() の閉じ
 
-// ★ お気に入り機能停止中: ユーザー情報シートに統合予定のため一時停止
-/*
 async function refreshFavoriteShortcuts(){
   const sel = document.getElementById("wardSelect");
   try {
@@ -1369,37 +1224,19 @@ async function refreshFavoriteShortcuts(){
     });
   } catch(err) { console.error("getFavoriteWards:", err); }
 }
-*/
 
 /* 気分投票 */
 async function voteMood(mood){
   if (_isMoodSubmitting) return; // 気分投票専用フラグで二重送信防止
+  showLoading();
   _isMoodSubmitting = true;
-
-  // ★ 楽観的UI: 押されたボタンをスピナーに切り替える
-  const pressedBtn = document.querySelector(
-    "#moodResult button[data-mood='" + mood.replace(/'/g, "\\'") + "']"
-  );
-  let origText = null;
-  if (pressedBtn) {
-    origText = pressedBtn.innerHTML;
-    pressedBtn.innerHTML = "<span class='placeCardSpinner'></span>";
-    pressedBtn.disabled = true;
-  }
-
   try {
+    // GAS側のvoteMoodはgetTodayMoodCountsの結果も返すので1回で完結
     const data = await callGAS("voteMood", userId, mood);
     _isMoodSubmitting = false;
-    renderMood(data); // 完了後に全体を再描画（スピナーも自動的に消える）
-  } catch(err) {
-    _isMoodSubmitting = false;
-    // ★ 失敗時はボタンを元に戻す
-    if (pressedBtn && origText !== null) {
-      pressedBtn.innerHTML = origText;
-      pressedBtn.disabled = false;
-    }
-    showToast("⚠️ 投票の送信に失敗しました。画面を閉じて開き直してください。", "error", 5000);
-  }
+    renderMood(data);
+    hideLoading();
+  } catch(err) { _isMoodSubmitting = false; _onGasError(err); }
 }
 
 // ★ 修正H: エラー時にユーザーへトースト通知を追加（旧: console.error のみでUIが空白のまま）
@@ -1447,7 +1284,6 @@ function renderMood(data){
 
     const btn = document.createElement("button");
     btn.textContent = "これ！";
-    btn.dataset.mood = m.mood;  // ★ 押されたボタンを特定するために追加
     // ★ addEventListener でクロージャに m.mood を安全に保持
     btn.addEventListener("click", () => voteMood(m.mood));
 
@@ -1639,17 +1475,13 @@ function _drawPlaceList(placeList, todayCounts, allAges, payload){
     const nameDiv = document.createElement("div");
     nameDiv.className = "name";
 
-    // アイコン＋施設名（青字＋下線でリンクとわかるように）＋詳細バッジ
+    // アイコン＋施設名＋詳細バッジ
     const mainSpan = document.createElement("span");
     mainSpan.style.cssText = "display:inline-flex; align-items:center; gap:1.5vw; flex-wrap:wrap;";
 
     const icon = hasTwins ? "🍒" : hasCircle ? "🌸" : "📍";
-
-    // ★ 施設名をリンク風スタイルに（モーダル内の住所リンクと同じ装飾）
-    const nameText = document.createElement("span");
-    nameText.style.cssText = "color:#1a73e8; text-decoration:underline; font-weight:500;";
-    nameText.textContent = icon + " " + placeName;
-    mainSpan.appendChild(nameText);
+    // ★ textContent で施設名を設定（特殊文字を自動エスケープ）
+    mainSpan.appendChild(document.createTextNode(icon + " " + placeName));
 
     const detailBadge = document.createElement("span");
     detailBadge.style.cssText = "font-size:2.8vw; color:#FF8A00; border:1px solid #FF8A00; border-radius:1vw; padding:0.3vw 1.2vw; font-weight:normal; white-space:nowrap;";
@@ -1727,16 +1559,13 @@ function _drawPlaceList(placeList, todayCounts, allAges, payload){
 
     div.appendChild(info);
 
-    // ── 投票ボタン（処理中はスピナーに切り替わる）
+    // ── 投票ボタン
     const voteBtn = document.createElement("button");
-    voteBtn.style.cssText = "flex-shrink:0; background:#FF8A00; color:white; border:none; padding:1.6vw 3.5vw; border-radius:2.5vw; font-size:3.5vw; white-space:nowrap; min-width:14vw; text-align:center;";
-    voteBtn.innerHTML = "投票 ›";
+    voteBtn.style.cssText = "flex-shrink:0; background:#FF8A00; color:white; border:none; padding:1.6vw 3.5vw; border-radius:2.5vw; font-size:3.5vw; white-space:nowrap;";
+    voteBtn.textContent = "投票 ›";
     // ★ addEventListener でクロージャにより placeName を安全に保持
     voteBtn.addEventListener("click", () => openVoteModal(placeName));
     div.appendChild(voteBtn);
-
-    // ★ 施設カード処理中スピナー用（不要になったので削除）
-    // スピナーはvoteBtn.innerHTMLを直接切り替えて表示する
 
     // ── 年齢帯ミニ行（施設）
     if (ageData) {
@@ -1916,27 +1745,18 @@ function submitVote(time){
   }
 
   closeVoteModal();
+  showLoading();
   _isSubmitting = true;
 
   const place = sanitizePlace(currentPlace);
   const ward  = document.getElementById("wardSelect").value;
 
-  // ★ 楽観的UI: GAS完了を待たずに即座にUIを切り替える
-  const prevPlace  = _todayPlace;
-  const prevWard   = _todayWard;
-  const prevChoice = document.querySelector(".travelChoice.active")?.dataset?.choice || "";
-  _todayPlace = place;
-  _todayWard  = ward;
-  _setTravelChoice("go");
-  _showVoteSpinner("go");       // ★ ボタンスピナー表示
-  _showCardSpinner(place);      // ★ 施設カードオーバーレイ表示
-
   callGAS("registerVoteAndRefresh", userId, place, time, age, ward)
     .then(payload => {
       _isSubmitting = false;
-      _hideVoteSpinner();        // ★ ボタンスピナー非表示
-      _hideAllCardSpinners();    // ★ 施設カードオーバーレイ非表示
-      // GAS完了後に実データでカウントを更新
+      _todayPlace = place;
+      _todayWard  = ward;
+      _setTravelChoice("go");
       const { todayCounts, allAges } = payload;
       const stayHome2   = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
       const goOutTotal2 = payload.goOutTotal || 0;
@@ -1946,16 +1766,7 @@ function submitVote(time){
       _renderFromPayload(payload);
       window.scrollTo(0, lastScrollPos);
     })
-    .catch(err => {
-      // ★ 失敗時はUIを元の状態に戻す
-      _isSubmitting = false;
-      _hideVoteSpinner();        // ★ ボタンスピナー非表示
-      _hideAllCardSpinners();    // ★ 施設カードオーバーレイ非表示
-      _todayPlace = prevPlace;
-      _todayWard  = prevWard;
-      _setTravelChoice(prevChoice);
-      showToast("⚠️ 投票の送信に失敗しました。画面を閉じて開き直してください。", "error", 5000);
-    });
+    .catch(err => { _isSubmitting = false; _onGasError(err); });
 }
 
 
@@ -1970,23 +1781,15 @@ function cancelVote(placeName) {
     return;
   }
 
+  showLoading();
   _isSubmitting = true;
-
-  // ★ 楽観的UI: GAS完了を待たずに即座にUIを切り替える
-  const prevPlace  = _todayPlace;
-  const prevWard   = _todayWard;
-  const prevChoice = document.querySelector(".travelChoice.active")?.dataset?.choice || "";
-  _todayPlace = "出かける";
-  _todayWard  = ward;
-  _setTravelChoice("go");
-  _showVoteSpinner("go");       // ★ ボタンスピナー表示
-  _showCardSpinner(prevPlace);  // ★ 取消中の施設カードにオーバーレイ表示
 
   callGAS("registerVoteAndRefresh", userId, "出かける", "未定", age, ward)
     .then(payload => {
       _isSubmitting = false;
-      _hideVoteSpinner();        // ★ ボタンスピナー非表示
-      _hideAllCardSpinners();    // ★ 施設カードオーバーレイ非表示
+      _todayPlace = "出かける";
+      _todayWard  = ward;
+      _setTravelChoice("go");
       const { todayCounts, allAges } = payload;
       const stayHome   = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
       const goOutTotal = payload.goOutTotal || 0;
@@ -1995,16 +1798,7 @@ function cancelVote(placeName) {
       _renderGoOutAgeTotal(payload.goOutAgeTotal || null, goOutTotal);
       _renderFromPayload(payload);
     })
-    .catch(err => {
-      // ★ 失敗時はUIを元の状態に戻す
-      _isSubmitting = false;
-      _hideVoteSpinner();        // ★ ボタンスピナー非表示
-      _hideAllCardSpinners();    // ★ 施設カードオーバーレイ非表示
-      _todayPlace = prevPlace;
-      _todayWard  = prevWard;
-      _setTravelChoice(prevChoice);
-      showToast("⚠️ 投票の送信に失敗しました。画面を閉じて開き直してください。", "error", 5000);
-    });
+    .catch(err => { _isSubmitting = false; _onGasError(err); });
 }
 
 /* ★ ひきこもりの年齢帯別人数を描画 */
@@ -2079,44 +1873,29 @@ function voteStayHome(){
     return;
   }
 
+  showLoading();
   _isSubmitting = true;
-  const ward = document.getElementById("wardSelect").value;
 
-  // ★ 楽観的UI: GAS完了を待たずに即座にUIを切り替える
-  const prevPlace  = _todayPlace;
-  const prevWard   = _todayWard;
-  const prevChoice = document.querySelector(".travelChoice.active")?.dataset?.choice || "";
-  _todayPlace = "";
-  _todayWard  = "";
-  _setTravelChoice("stay");
-  _showVoteSpinner("stay");  // ★ 送信中スピナー表示
+  const ward = document.getElementById("wardSelect").value;
 
   callGAS("registerVoteAndRefresh", userId, "引きこもり", "なし", age, ward)
     .then(payload => {
       _isSubmitting = false;
-      _hideVoteSpinner();  // ★ スピナー非表示
       const { todayCounts, allAges } = payload;
       const stayHome = (todayCounts["引きこもり"] && todayCounts["引きこもり"]["なし"]) || 0;
+      _todayPlace = "";
+      _todayWard  = "";
       _updateTravelCounts(stayHome, 0);
+      _setTravelChoice(stayHome > 0 ? "stay" : "");
       _renderStayHomeAge(allAges, stayHome);
       _renderGoOutAgeTotal(null, 0);
       _renderFromPayload(payload);
       window.scrollTo(0, lastScrollPos);
     })
-    .catch(err => {
-      // ★ 失敗時はUIを元の状態に戻す
-      _isSubmitting = false;
-      _hideVoteSpinner();  // ★ スピナー非表示
-      _todayPlace = prevPlace;
-      _todayWard  = prevWard;
-      _setTravelChoice(prevChoice);
-      showToast("⚠️ 投票の送信に失敗しました。画面を閉じて開き直してください。", "error", 5000);
-    });
+    .catch(err => { _isSubmitting = false; _onGasError(err); });
 }
 
 
-// ★ お気に入り機能停止中: ユーザー情報シートに統合予定のため一時停止
-/*
 function toggleFav(){
   const ward = document.getElementById("wardSelect").value;
   if (!ward){
@@ -2133,7 +1912,6 @@ function toggleFav(){
     })
     .catch(_onGasError);
 }
-*/
 
 function renderAgeBreakdown(data){
   const area = document.getElementById("ageBreakdownArea");
@@ -2169,6 +1947,12 @@ function renderAgeBreakdown(data){
 
 
 init();
+
+// ★ PWA: Service Worker を登録
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .catch(err => console.log('SW登録失敗:', err));
+}
 </script>
 
   <!-- ★ トースト通知 -->
