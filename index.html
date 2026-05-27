@@ -33,7 +33,7 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 }
 .tab-content{
   display: none;
-  overflow: hidden;
+  /* ★ overflow:hidden を削除 → Android LINEでselectドロップダウンが開かないバグの原因 */
 }
 .tab-button{
   flex:1;
