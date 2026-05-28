@@ -9,22 +9,19 @@
 /* ===============================================
    CUSTOM SELECT CSS（.cs- 名前空間で完全分離）
    既存CSSには一切手を加えない
-   Android LINE WebView の select 不具合を回避するための
-   代替UIコンポーネント専用スタイル
+   ①フォント継承を明示（iOS Safari対策）
    =============================================== */
 
-/* ① ラッパー：既存のinputBoxと同じ見た目を維持 */
 .cs-wrapper {
-  position: relative;  /* dropdownのアンカー（ただしdropdownはfixedなので実質不要） */
+  position: relative;
   width: 100%;
   box-sizing: border-box;
-  /* Android WebView: touch-action:manipulation で300ms遅延を防止 */
   touch-action: manipulation;
 }
 
-/* ② トリガーボタン：既存.inputBoxと同等の見た目 */
 .cs-trigger {
   width: 100%;
+  font-family: inherit; /* ★ iOS Safari: 明示しないとページフォントを引き継がない */
   font-size: 4.5vw;
   padding: 2.5vw;
   border-radius: 2vw;
@@ -36,16 +33,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 11vw; /* タップしやすい最小高さ */
-  /* Android WebView: 16px未満だとズームが起きるため4.5vwを使用 */
+  min-height: 11vw;
 }
-
-/* 未選択時のプレースホルダースタイル */
-.cs-trigger.cs-placeholder {
-  color: #888;
-}
-
-/* 開閉インジケーター（▼） */
+.cs-trigger.cs-placeholder { color: #888; }
 .cs-trigger::after {
   content: "▼";
   font-size: 3vw;
@@ -58,45 +48,31 @@
   transform: rotate(180deg);
 }
 
-/* ③ ドロップダウン本体
-   position:fixed で overflow:hidden の親要素を完全に突き抜ける
-   Android LINE WebViewでselectが開かない根本原因への対処 */
 .cs-dropdown {
-  position: fixed;         /* ← overflow:hidden問題の根本解決 */
+  position: fixed;
   background: #FFFFFF;
   border: 1px solid #E5E5E5;
   border-radius: 2vw;
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   overflow-y: auto;
-  max-height: 50vh;        /* 画面の半分を上限に */
-  z-index: 1000;           /* モーダル(9999)より下、通常コンテンツより上 */
-  /* Android WebView: -webkit-overflow-scrolling でネイティブスクロール */
+  max-height: 50vh;
+  z-index: 1000;
   -webkit-overflow-scrolling: touch;
 }
 
-/* ④ 各選択肢 */
 .cs-option {
   padding: 3.5vw 4vw;
-  font-size: 4.5vw;        /* Android WebViewズーム防止のため16px相当以上 */
+  font-family: inherit; /* ★ iOS Safari: 明示しないとページフォントを引き継がない */
+  font-size: 4.5vw;
   color: #333;
   cursor: pointer;
   border-bottom: 1px solid #F0F0F0;
-  /* Android WebView: touch-action:manipulation で300ms遅延を防止 */
   touch-action: manipulation;
-  /* テキスト選択を無効化（長押し誤操作防止） */
   -webkit-user-select: none;
   user-select: none;
 }
-.cs-option:last-child {
-  border-bottom: none;
-}
-
-/* タップ時のフィードバック */
-.cs-option:active {
-  background: #FFF3E0;
-}
-
-/* 選択済み状態 */
+.cs-option:last-child { border-bottom: none; }
+.cs-option:active { background: #FFF3E0; }
 .cs-option.cs-option--selected {
   background: #FFF8F0;
   color: #FF8A00;
@@ -106,6 +82,9 @@
 /* ===============================================
    CUSTOM SELECT CSS ここまで
    =============================================== */
+
+/* ============================
+   ふたごアプリ 3色テーマ（白・オレンジ・薄グレー）
    ============================ */
 
 /* 全体設定 */
@@ -2267,184 +2246,152 @@ function renderAgeBreakdown(data){
 
 
 /* ===============================================
-   CUSTOM SELECT MODULE
-   Android LINE WebView 対応カスタムセレクト
-   対象: wardSelect のみ（段階移行 Step1）
-
-   設計方針:
-   ・既存selectは削除せず非表示にするだけ
-     → getElementById("wardSelect").value を使う既存JS全15箇所をゼロ変更
-   ・IIFE（即時実行関数）でスコープを完全分離
-     → グローバル変数汚染なし
-   ・loadPlaces() をラップして _tryAutoLoadPlaces による
-     自動区復元時のカスタムUI表示同期を実現
-   ・dropdownはposition:fixedで配置
-     → overflow:hiddenの親要素を突き抜ける（Android LINE根本対策）
-   ・Android LINEのUA判定で有効化
-     → iPhone/通常ブラウザは既存selectのまま
+   CUSTOM SELECT MODULE v2
+   wardSelect + ageSelect 両対応
+   汎用化により将来の追加selectも設定1行で対応可能
    =============================================== */
 
 (function() {
   "use strict";
 
-  /* ------------------------------------------
-     ① 環境判定
-     UA文字列で Android + LINE を判定
-     将来的に全端末統一する場合は _CS_ENABLED = true に固定するだけでよい
-  ------------------------------------------ */
+  /* ① 環境判定 */
   var ua = navigator.userAgent || "";
   var _CS_ENABLED = /Android/i.test(ua) && /Line\//i.test(ua);
+  // デバッグ用: var _CS_ENABLED = true;
 
-  // 開発・デバッグ時は以下をtrueにすると全端末で動作確認可能
-  // var _CS_ENABLED = true;
+  if (!_CS_ENABLED) return;
 
-  if (!_CS_ENABLED) return; // Android LINE以外は何もしない
+  /* 対象selectの設定（ここを追加するだけで新しいselectに対応） */
+  var _TARGETS = [
+    {
+      targetId:   "wardSelect",
+      wrapperId:  "cs-wardSelect",
+      dropdownId: "cs-wardSelect-dropdown",
+      placeholder: "区を選択してください",
+      /* onSelect: 区選択時にloadPlaces()を呼ぶ（onchange代替） */
+      onSelect: function() {
+        if (typeof loadPlaces === "function") loadPlaces();
+      }
+    },
+    {
+      targetId:   "ageSelect",
+      wrapperId:  "cs-ageSelect",
+      dropdownId: "cs-ageSelect-dropdown",
+      placeholder: "年齢を選んでください",
+      /* onSelect: ageSelectは選択時の即時アクション不要
+         ボタンタップ時にvalueを読む設計のためnull */
+      onSelect: null
+    }
+  ];
 
-  /* 設定値（1箇所で管理） */
-  var TARGET_ID   = "wardSelect";              // 対象selectのID
-  var WRAPPER_ID  = "cs-wardSelect";           // カスタムUIルートID
-  var DROPDOWN_ID = "cs-wardSelect-dropdown";  // dropdownのID
-  var PLACEHOLDER = "区を選択してください";       // 未選択時テキスト
-
-  /* 状態管理 */
   var _isOpen = false;
+  var _currentDropdownId = null;
 
-  /* ------------------------------------------
-     ② UIの構築
-     既存selectの直後にカスタムUIを挿入
-     HTMLファイルの変更は不要（JS側で動的生成）
-  ------------------------------------------ */
-  function _buildUI() {
-    var originalSel = document.getElementById(TARGET_ID);
-    if (!originalSel) return; // wardSelectが見つからなければ何もしない
+  /* ② UIの構築（各targetに対して実行） */
+  function _buildAll() {
+    _TARGETS.forEach(function(cfg) {
+      var sel = document.getElementById(cfg.targetId);
+      if (!sel) return;
+      _buildOne(cfg, sel);
+    });
+    /* loadPlaces()をラップしてwardSelectの自動区復元時の表示同期に対応 */
+    _wrapLoadPlaces();
+  }
 
-    /* 既存selectを非表示（削除しない・value読み書きは既存JSに委ねる） */
+  function _buildOne(cfg, originalSel) {
+    /* 既存selectを非表示（削除しない・valueは既存JSが読める） */
     originalSel.style.display = "none";
 
-    /* カスタムUIのルートwrapper */
+    /* wrapper */
     var wrapper = document.createElement("div");
-    wrapper.id        = WRAPPER_ID;
+    wrapper.id        = cfg.wrapperId;
     wrapper.className = "cs-wrapper";
-    /* アクセシビリティ: comboboxとしてスクリーンリーダーに認識させる */
     wrapper.setAttribute("role", "combobox");
     wrapper.setAttribute("aria-haspopup", "listbox");
     wrapper.setAttribute("aria-expanded", "false");
-    wrapper.setAttribute("aria-label", "区を選択");
+    wrapper.setAttribute("aria-label", cfg.placeholder);
 
-    /* トリガー（ユーザーがタップするボタン部分） */
+    /* trigger */
     var trigger = document.createElement("div");
     trigger.className = "cs-trigger cs-placeholder";
-    trigger.textContent = PLACEHOLDER;
-    /* アクセシビリティ: Tabキーでフォーカス可能 */
+    trigger.textContent = cfg.placeholder;
     trigger.setAttribute("tabindex", "0");
     trigger.setAttribute("role", "button");
 
-    /* ドロップダウン（選択肢リスト） */
+    /* dropdown: bodyに直接appendしてoverflow:hidden問題を完全回避 */
     var dropdown = document.createElement("div");
-    dropdown.id        = DROPDOWN_ID;
+    dropdown.id        = cfg.dropdownId;
     dropdown.className = "cs-dropdown";
-    dropdown.style.display = "none"; /* 初期状態は非表示 */
+    dropdown.style.display = "none";
     dropdown.setAttribute("role", "listbox");
-    dropdown.setAttribute("aria-label", "区の選択肢");
-
-    wrapper.appendChild(trigger);
-    /* dropdownはbodyに直接appendする（position:fixedのため）
-       wrapperに入れるとoverflow:hiddenの影響を受ける可能性がある */
     document.body.appendChild(dropdown);
 
-    /* 既存selectの直後に挿入 */
+    wrapper.appendChild(trigger);
     originalSel.parentNode.insertBefore(wrapper, originalSel.nextSibling);
 
-    /* イベント登録 */
-    _bindEvents(wrapper, trigger, dropdown, originalSel);
+    _bindEvents(cfg, wrapper, trigger, dropdown, originalSel);
 
-    /* loadPlaces をラップして自動区復元時の表示同期に対応
-       _tryAutoLoadPlaces が wardSel.value = _todayWard した後に
-       loadPlaces() が呼ばれるため、そのタイミングでUI表示を同期 */
-    _wrapLoadPlaces(trigger, originalSel);
-  }
-
-  /* ------------------------------------------
-     ③ イベント制御
-  ------------------------------------------ */
-  function _bindEvents(wrapper, trigger, dropdown, originalSel) {
-
-    /* トリガーのタップ/クリックで開閉 */
-    trigger.addEventListener("click", function(e) {
-      /* 外側へのバブルを止める（document click イベントと競合しないため） */
-      e.stopPropagation();
-      if (_isOpen) {
-        _close(wrapper, dropdown);
-      } else {
-        _open(wrapper, trigger, dropdown);
-      }
-    });
-
-    /* Enterキーでも開閉（キーボードアクセシビリティ） */
-    trigger.addEventListener("keydown", function(e) {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        if (_isOpen) {
-          _close(wrapper, dropdown);
-        } else {
-          _open(wrapper, trigger, dropdown);
-        }
-      }
-      /* Escapeで閉じる */
-      if (e.key === "Escape" && _isOpen) _close(wrapper, dropdown);
-    });
-
-    /* document クリックで閉じる（外側タップ検知）
-       captureフェーズではなくバブルフェーズで登録（既存イベントとの競合回避） */
-    document.addEventListener("click", function(e) {
-      if (!_isOpen) return;
-      var inWrapper  = wrapper.contains(e.target);
-      var inDropdown = dropdown.contains(e.target);
-      if (!inWrapper && !inDropdown) {
-        _close(wrapper, dropdown);
-      }
-    });
-
-    /* ⑤ スクロール時に閉じる
-       position:fixedのdropdownはページスクロールで位置がずれるため */
-    window.addEventListener("scroll", function() {
-      if (_isOpen) _close(wrapper, dropdown);
-    }, { passive: true }); /* ⑨ Android WebView: passive:trueでスクロールパフォーマンス確保 */
-
-    /* wardSelectのoptions動的更新を監視（_initAppがoptionを追加したとき）
-       MutationObserverでDOM変化を検知してdropdownに同期 */
+    /* MutationObserver: _initAppがoptionsを動的追加したときに同期 */
     if (window.MutationObserver) {
       var observer = new MutationObserver(function() {
-        _syncOptions(dropdown, originalSel);
-        _syncDisplay(trigger, originalSel);
+        _syncOptions(cfg, dropdown, originalSel);
+        _syncDisplay(trigger, originalSel, cfg.placeholder);
       });
       observer.observe(originalSel, { childList: true });
     }
   }
 
-  /* ------------------------------------------
-     ④ 開く処理
-     getBoundingClientRectでトリガーの位置を取得し
-     position:fixedで直下に配置
-  ------------------------------------------ */
-  function _open(wrapper, trigger, dropdown) {
+  /* ③ イベント制御 */
+  function _bindEvents(cfg, wrapper, trigger, dropdown, originalSel) {
+    trigger.addEventListener("click", function(e) {
+      e.stopPropagation();
+      if (_isOpen && _currentDropdownId === cfg.dropdownId) {
+        _close();
+      } else {
+        _closeAll(); /* 他のdropdownを先に閉じる */
+        _open(cfg, wrapper, trigger, dropdown);
+      }
+    });
+
+    trigger.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (_isOpen && _currentDropdownId === cfg.dropdownId) {
+          _close();
+        } else {
+          _closeAll();
+          _open(cfg, wrapper, trigger, dropdown);
+        }
+      }
+      if (e.key === "Escape") _close();
+    });
+
+    /* スクロール時に閉じる（position:fixedのdropdownがずれるため） */
+    window.addEventListener("scroll", function() {
+      if (_isOpen) _close();
+    }, { passive: true });
+  }
+
+  /* ドキュメント全体のclickで閉じる（1回だけ登録） */
+  document.addEventListener("click", function() {
+    if (_isOpen) _close();
+  });
+
+  /* ④ 開く */
+  function _open(cfg, wrapper, trigger, dropdown) {
     _isOpen = true;
+    _currentDropdownId = cfg.dropdownId;
     wrapper.setAttribute("aria-expanded", "true");
-    trigger.classList.remove("cs-placeholder");
 
-    /* トリガーの現在位置を取得（スクロール位置に依存しない絶対座標） */
     var rect = trigger.getBoundingClientRect();
-
-    /* 基本配置：トリガーの真下 */
-    dropdown.style.left   = rect.left   + "px";
-    dropdown.style.width  = rect.width  + "px";
-    dropdown.style.top    = (rect.bottom + 4) + "px";
-    dropdown.style.bottom = "";
+    dropdown.style.left     = rect.left + "px";
+    dropdown.style.width    = rect.width + "px";
     dropdown.style.maxHeight = "50vh";
-    dropdown.style.display = "block";
+    dropdown.style.top      = (rect.bottom + 4) + "px";
+    dropdown.style.bottom   = "";
+    dropdown.style.display  = "block";
 
-    /* 画面下部に余裕がない場合は上に表示
-       （⑦ 区数が多い場合のスクロール対応）*/
+    /* 画面下部の余裕が少ない場合は上方向に表示 */
     var spaceBelow = window.innerHeight - rect.bottom;
     if (spaceBelow < 150 && rect.top > spaceBelow) {
       dropdown.style.top    = "";
@@ -2453,158 +2400,124 @@ function renderAgeBreakdown(data){
     }
   }
 
-  /* ------------------------------------------
-     ⑤ 閉じる処理
-  ------------------------------------------ */
-  function _close(wrapper, dropdown) {
-    _isOpen = false;
-    if (wrapper)  wrapper.setAttribute("aria-expanded", "false");
+  /* ⑤ 閉じる */
+  function _close() {
+    if (!_currentDropdownId) return;
+    var dropdown = document.getElementById(_currentDropdownId);
+    var cfg      = _TARGETS.find(function(t) { return t.dropdownId === _currentDropdownId; });
+    if (cfg) {
+      var wrapper = document.getElementById(cfg.wrapperId);
+      if (wrapper) wrapper.setAttribute("aria-expanded", "false");
+    }
     if (dropdown) {
       dropdown.style.display = "none";
       dropdown.style.top     = "";
       dropdown.style.bottom  = "";
     }
+    _isOpen = false;
+    _currentDropdownId = null;
   }
 
-  /* ------------------------------------------
-     ⑥ options の同期
-     wardSelectにoptionが追加されたらdropdownにも反映
-     _initApp で区名がGASから取得されるタイミングで呼ばれる
-  ------------------------------------------ */
-  function _syncOptions(dropdown, originalSel) {
+  function _closeAll() {
+    _TARGETS.forEach(function(cfg) {
+      var dropdown = document.getElementById(cfg.dropdownId);
+      var wrapper  = document.getElementById(cfg.wrapperId);
+      if (dropdown) { dropdown.style.display = "none"; dropdown.style.top = ""; dropdown.style.bottom = ""; }
+      if (wrapper)  wrapper.setAttribute("aria-expanded", "false");
+    });
+    _isOpen = false;
+    _currentDropdownId = null;
+  }
+
+  /* ⑥ options同期 */
+  function _syncOptions(cfg, dropdown, originalSel) {
     dropdown.innerHTML = "";
     var options = originalSel.querySelectorAll("option");
     options.forEach(function(opt) {
-      if (!opt.value) return; /* 空value（プレースホルダーoption）はスキップ */
-
+      if (!opt.value) return;
       var item = document.createElement("div");
-      item.className = "cs-option";
-      item.textContent = opt.textContent;
+      item.className    = "cs-option";
+      item.textContent  = opt.textContent;
       item.dataset.value = opt.value;
-      /* アクセシビリティ */
       item.setAttribute("role", "option");
       item.setAttribute("aria-selected", originalSel.value === opt.value ? "true" : "false");
+      if (originalSel.value === opt.value) item.classList.add("cs-option--selected");
 
-      /* 選択中の区にスタイルを適用 */
-      if (originalSel.value === opt.value) {
-        item.classList.add("cs-option--selected");
-      }
-
-      /* ⑥ 値の反映：選択時にoriginalSelectのvalueを更新し既存JSに橋渡し */
       item.addEventListener("click", function(e) {
         e.stopPropagation();
-        _selectValue(opt.value, opt.textContent, dropdown, originalSel);
+        _selectValue(cfg, opt.value, opt.textContent, dropdown, originalSel);
       });
-
       dropdown.appendChild(item);
     });
   }
 
-  /* ------------------------------------------
-     ⑦ 値の選択処理
-     カスタムUIで選択 → wardSelect.value に反映
-     → loadPlaces() を呼んで既存の施設リスト読み込みを実行
-  ------------------------------------------ */
-  function _selectValue(value, text, dropdown, originalSel) {
-    /* ⑦ フォーム連携：既存selectのvalueを更新（既存JSへの橋渡し） */
-    originalSel.value = value;
+  /* ⑦ 値の選択 */
+  function _selectValue(cfg, value, text, dropdown, originalSel) {
+    originalSel.value = value; /* 既存JSへの橋渡し */
 
-    /* カスタムUI側の表示テキストを更新 */
-    var trigger = document.querySelector("#" + WRAPPER_ID + " .cs-trigger");
+    var trigger = document.querySelector("#" + cfg.wrapperId + " .cs-trigger");
     if (trigger) {
-      trigger.textContent = value ? text : PLACEHOLDER;
-      /* プレースホルダースタイルの切替 */
-      if (value) {
-        trigger.classList.remove("cs-placeholder");
-      } else {
-        trigger.classList.add("cs-placeholder");
-      }
+      trigger.textContent = value ? text : cfg.placeholder;
+      trigger.classList.toggle("cs-placeholder", !value);
     }
 
-    /* 選択済みスタイルの更新 */
-    var items = dropdown.querySelectorAll(".cs-option");
-    items.forEach(function(el) {
+    dropdown.querySelectorAll(".cs-option").forEach(function(el) {
       var isSelected = el.dataset.value === value;
       el.classList.toggle("cs-option--selected", isSelected);
       el.setAttribute("aria-selected", isSelected ? "true" : "false");
     });
 
-    /* dropdownを閉じる */
-    var wrapper = document.getElementById(WRAPPER_ID);
-    _close(wrapper, dropdown);
+    _close();
 
-    /* onchange="loadPlaces()" の代替
-       既存selectが非表示のためonchangeが発火しないため手動呼出し */
-    if (typeof loadPlaces === "function") loadPlaces();
+    /* onSelectコールバック（wardSelectはloadPlaces()、ageSelectはなし） */
+    if (typeof cfg.onSelect === "function") cfg.onSelect(value);
   }
 
-  /* ------------------------------------------
-     ⑧ 表示の同期（wardSelect.valueからカスタムUIへ）
-     _tryAutoLoadPlaces が wardSel.value = _todayWard を実行した後に
-     カスタムUIの表示テキストも合わせる
-  ------------------------------------------ */
-  function _syncDisplay(trigger, originalSel) {
+  /* ⑧ 表示同期（wardSelect.valueが外部から変更されたとき） */
+  function _syncDisplay(trigger, originalSel, placeholder) {
     var val = originalSel.value;
-    if (!val) {
-      trigger.textContent = PLACEHOLDER;
-      trigger.classList.add("cs-placeholder");
-      return;
-    }
-    var opt = originalSel.querySelector('option[value="' + val + '"]');
+    if (!val) { trigger.textContent = placeholder; trigger.classList.add("cs-placeholder"); return; }
+    var opt = originalSel.querySelector("option[value=\"" + val + "\"]");
     trigger.textContent = opt ? opt.textContent : val;
     trigger.classList.remove("cs-placeholder");
   }
 
-  /* ------------------------------------------
-     loadPlaces() のラップ
-     _tryAutoLoadPlaces が wardSel.value を直接変更してから
-     loadPlaces() を呼ぶため、loadPlacesの先頭で表示同期を行う
-     Android LINEのみ実行されるため既存動作への影響はゼロ
-  ------------------------------------------ */
-  function _wrapLoadPlaces(trigger, originalSel) {
-    /* loadPlaces が定義されていることを確認 */
-    if (typeof loadPlaces !== "function") {
-      console.warn("CustomSelect: loadPlaces が見つかりません");
-      return;
-    }
-    var _origLoadPlaces = loadPlaces;
-    /* グローバルのloadPlacesを上書き（Android LINEのみ） */
+  /* loadPlaces()ラップ: _tryAutoLoadPlacesがwardSelect.valueを変更後に
+     loadPlaces()を呼ぶため、その時点でwardSelectのカスタムUI表示を同期 */
+  function _wrapLoadPlaces() {
+    if (typeof loadPlaces !== "function") return;
+    var _orig = loadPlaces;
     loadPlaces = function() {
-      /* ⑧ wardSelect.value からカスタムUI表示を同期
-         _tryAutoLoadPlaces によるvalue変更もここでキャッチできる */
-      _syncDisplay(trigger, originalSel);
+      var wardCfg = _TARGETS[0]; /* wardSelect */
+      var wardSel = document.getElementById(wardCfg.targetId);
+      var trigger = document.querySelector("#" + wardCfg.wrapperId + " .cs-trigger");
+      if (wardSel && trigger) _syncDisplay(trigger, wardSel, wardCfg.placeholder);
       /* 選択済みスタイルも更新 */
-      var dropdown = document.getElementById(DROPDOWN_ID);
+      var dropdown = document.getElementById(wardCfg.dropdownId);
       if (dropdown) {
         dropdown.querySelectorAll(".cs-option").forEach(function(el) {
-          var isSelected = el.dataset.value === originalSel.value;
-          el.classList.toggle("cs-option--selected", isSelected);
-          el.setAttribute("aria-selected", isSelected ? "true" : "false");
+          var isSel = el.dataset.value === wardSel.value;
+          el.classList.toggle("cs-option--selected", isSel);
+          el.setAttribute("aria-selected", isSel ? "true" : "false");
         });
       }
-      /* 既存の loadPlaces() を実行 */
-      _origLoadPlaces.call(this);
+      _orig.call(this);
     };
   }
 
-  /* ------------------------------------------
-     初期化実行
-     DOMが準備できた時点で実行
-     （このscriptは</body>直前にあるためDOMは既に準備済み）
-  ------------------------------------------ */
-  _buildUI();
+  /* 初期化 */
+  _buildAll();
 
-  /* ⑨ Android WebView 注意点まとめ（コメント）
-     - position:fixed dropdown が本解決策の核心
-       overflow:hidden の親要素を突き抜けられる
-     - touch-action:manipulation で300ms遅延を排除
-     - font-size 16px(≒4.5vw)以上でズームを防止
-     - -webkit-overflow-scrolling:touch でネイティブスクロール
-     - MutationObserver で動的option追加に対応
-     - IIFE で既存コードとスコープを完全分離
+  /* ⑨ Android WebView注意点（コメント）
+     - position:fixed で overflow:hidden を突き抜ける（根本対策）
+     - font-family:inherit を CSS に明示（iOS Safari フォント継承問題対策）
+     - touch-action:manipulation で 300ms 遅延を防止
+     - MutationObserver で動的option追加を検知
+     - IIFE + "use strict" でスコープ完全分離
+     - 複数select対応: _TARGETS 配列に追加するだけで拡張可能
   */
 
-})(); /* IIFE終了 */
+})();
 
 /* ===============================================
    CUSTOM SELECT MODULE ここまで
