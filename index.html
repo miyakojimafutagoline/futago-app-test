@@ -2339,6 +2339,10 @@ function renderAgeBreakdown(data){
       });
       observer.observe(originalSel, { childList: true });
     }
+
+    /* ★ HTMLにoptionがあらかじめ存在する場合（ageSelect等）は
+       MutationObserverが発火しないため初期化時に即時同期する */
+    _syncOptions(cfg, dropdown, originalSel);
   }
 
   /* ③ イベント制御 */
