@@ -2296,6 +2296,7 @@ function renderAgeBreakdown(data){
     });
     /* loadPlaces()をラップしてwardSelectの自動区復元時の表示同期に対応 */
     _wrapLoadPlaces();
+    _wrapTryAutoLoadPlaces(); /* ★ 追加 */
   }
 
   function _buildOne(cfg, originalSel) {
@@ -2492,20 +2493,63 @@ function renderAgeBreakdown(data){
     if (typeof loadPlaces !== "function") return;
     var _orig = loadPlaces;
     loadPlaces = function() {
-      var wardCfg = _TARGETS[0]; /* wardSelect */
+      /* wardSelect 同期（既存） */
+      var wardCfg = _TARGETS[0];
       var wardSel = document.getElementById(wardCfg.targetId);
-      var trigger = document.querySelector("#" + wardCfg.wrapperId + " .cs-trigger");
-      if (wardSel && trigger) _syncDisplay(trigger, wardSel, wardCfg.placeholder);
-      /* 選択済みスタイルも更新 */
-      var dropdown = document.getElementById(wardCfg.dropdownId);
-      if (dropdown) {
-        dropdown.querySelectorAll(".cs-option").forEach(function(el) {
+      var wardTrigger = document.querySelector("#" + wardCfg.wrapperId + " .cs-trigger");
+      if (wardSel && wardTrigger) _syncDisplay(wardTrigger, wardSel, wardCfg.placeholder);
+      var wardDropdown = document.getElementById(wardCfg.dropdownId);
+      if (wardDropdown && wardSel) {
+        wardDropdown.querySelectorAll(".cs-option").forEach(function(el) {
           var isSel = el.dataset.value === wardSel.value;
           el.classList.toggle("cs-option--selected", isSel);
           el.setAttribute("aria-selected", isSel ? "true" : "false");
         });
       }
+      /* ★ ageSelect 同期（追加）
+         _initApp は ageSelect.value を設定してから loadPlaces() を呼ぶため
+         このタイミングで ageSelect のカスタムUI表示を同期する */
+      var ageCfg = _TARGETS[1];
+      var ageSel = document.getElementById(ageCfg.targetId);
+      var ageTrigger = document.querySelector("#" + ageCfg.wrapperId + " .cs-trigger");
+      if (ageSel && ageTrigger) _syncDisplay(ageTrigger, ageSel, ageCfg.placeholder);
+      var ageDropdown = document.getElementById(ageCfg.dropdownId);
+      if (ageDropdown && ageSel) {
+        ageDropdown.querySelectorAll(".cs-option").forEach(function(el) {
+          var isSel = el.dataset.value === ageSel.value;
+          el.classList.toggle("cs-option--selected", isSel);
+          el.setAttribute("aria-selected", isSel ? "true" : "false");
+        });
+      }
       _orig.call(this);
+    };
+  }
+
+  /* ★ _tryAutoLoadPlaces のラップ（追加）
+     wardがない場合は loadPlaces() が呼ばれないため
+     _wrapLoadPlaces だけでは ageSelect が同期されないケースをカバー
+     例: 初回ユーザー・ward未選択でも age が保存されている場合 */
+  function _wrapTryAutoLoadPlaces() {
+    if (typeof _tryAutoLoadPlaces !== "function") return;
+    var _orig = _tryAutoLoadPlaces;
+    _tryAutoLoadPlaces = function() {
+      _orig.call(this);
+      /* _initApp が ageSelect.value を設定した直後に _tryAutoLoadPlaces が呼ばれる
+         ward なしで loadPlaces() が呼ばれなかった場合もここで ageSelect を同期 */
+      var ageCfg = _TARGETS[1];
+      var ageSel = document.getElementById(ageCfg.targetId);
+      var ageTrigger = document.querySelector("#" + ageCfg.wrapperId + " .cs-trigger");
+      if (ageSel && ageTrigger) {
+        _syncDisplay(ageTrigger, ageSel, ageCfg.placeholder);
+        var ageDropdown = document.getElementById(ageCfg.dropdownId);
+        if (ageDropdown) {
+          ageDropdown.querySelectorAll(".cs-option").forEach(function(el) {
+            var isSel = el.dataset.value === ageSel.value;
+            el.classList.toggle("cs-option--selected", isSel);
+            el.setAttribute("aria-selected", isSel ? "true" : "false");
+          });
+        }
+      }
     };
   }
 
