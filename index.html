@@ -452,6 +452,7 @@ h3{ font-size:4vw; margin-bottom:2vw; }
   <!-- ★ 最上部タブ -->
   <div class="tab-container">
     <button class="tab-button active" onclick="showTab('placeTab', this)">今日どこか行く？</button>
+    <button class="tab-button" onclick="showTab('planTab', this)">お出かけ予定</button>
     <button class="tab-button" onclick="showTab('moodTab', this)">今日の気分は？</button>
   </div>
 
@@ -461,6 +462,110 @@ h3{ font-size:4vw; margin-bottom:2vw; }
     <div id="moodResult"></div>
 
   </div>
+
+  <!-- ★ お出かけ予定タブ -->
+  <div id="planTab" class="tab-content">
+
+    <!-- 絞り込み -->
+    <div style="margin-bottom:3vw;">
+      <select id="planWardFilter" onchange="_renderPlans()" style="
+        width:100%; font-size:4vw; padding:2vw;
+        border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+      ">
+        <option value="">📍 すべての区を表示</option>
+      </select>
+    </div>
+
+    <!-- 予定一覧 -->
+    <div id="planList" style="margin-bottom:4vw;"></div>
+
+    <!-- 登録ボタン -->
+    <div style="text-align:center; margin-bottom:4vw;">
+      <button onclick="_openPlanForm()" style="
+        background:#FF8A00; color:#FFF; border:none;
+        padding:3.5vw 8vw; border-radius:8vw;
+        font-size:4vw; font-weight:bold; cursor:pointer;
+        touch-action:manipulation;
+      ">＋ 予定を登録する</button>
+    </div>
+
+    <!-- 登録フォーム（初期非表示） -->
+    <div id="planFormArea" style="display:none;
+      background:#FFF8F0; border:2px solid #FF8A00;
+      border-radius:3vw; padding:4vw; margin-bottom:4vw;
+    ">
+      <div style="font-size:4.2vw; font-weight:bold; color:#FF8A00; margin-bottom:3vw;">
+        📅 お出かけ予定を登録
+      </div>
+
+      <!-- 日付 -->
+      <div style="margin-bottom:3vw;">
+        <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">日付</div>
+        <input type="date" id="planDate" style="
+          width:100%; font-size:4vw; padding:2vw;
+          border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+        ">
+      </div>
+
+      <!-- 時刻 -->
+      <div style="margin-bottom:3vw;">
+        <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">時刻（開始予定）</div>
+        <select id="planTime" style="
+          width:100%; font-size:4vw; padding:2vw;
+          border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+        ">
+          <option value="">時刻を選択</option>
+          <option>9:00</option><option>9:30</option>
+          <option>10:00</option><option>10:30</option>
+          <option>11:00</option><option>11:30</option>
+          <option>12:00</option><option>12:30</option>
+          <option>13:00</option><option>13:30</option>
+          <option>14:00</option><option>14:30</option>
+          <option>15:00</option><option>15:30</option>
+          <option>16:00</option><option>16:30</option>
+          <option>17:00</option>
+        </select>
+      </div>
+
+      <!-- 区 -->
+      <div style="margin-bottom:3vw;">
+        <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">区</div>
+        <select id="planWard" style="
+          width:100%; font-size:4vw; padding:2vw;
+          border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+        ">
+          <option value="">区を選択</option>
+        </select>
+      </div>
+
+      <!-- 行き先・イベント名 -->
+      <div style="margin-bottom:3vw;">
+        <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">行き先・イベント名</div>
+        <textarea id="planDesc" rows="3" placeholder="例：子育てプラザ ママヨガ" style="
+          width:100%; font-size:4vw; padding:2vw;
+          border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+          resize:none; font-family:inherit; line-height:1.5;
+        "></textarea>
+      </div>
+
+      <!-- ボタン -->
+      <div style="display:flex; gap:3vw;">
+        <button onclick="_submitPlan()" style="
+          flex:2; background:#FF8A00; color:#FFF; border:none;
+          padding:3vw; border-radius:6vw;
+          font-size:4vw; font-weight:bold; cursor:pointer;
+          touch-action:manipulation;
+        ">登録する</button>
+        <button onclick="_closePlanForm()" style="
+          flex:1; background:#EEE; color:#555; border:none;
+          padding:3vw; border-radius:6vw;
+          font-size:4vw; cursor:pointer;
+          touch-action:manipulation;
+        ">キャンセル</button>
+      </div>
+    </div>
+
+  </div> <!-- /planTab -->
 
   <!-- ★ 行き先タブ -->
   <div id="placeTab" class="tab-content">
@@ -921,10 +1026,10 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 <script>
 // ★ GASのエンドポイントURL（デプロイ後に更新不要）
 /* 本番用 */
-//const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
 
 /*テスト用*/
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwdwU_Tc1gjiyPE8_OeEp0LcPONu6AzyL9mbup6IlsHzd8_kUugETC5vihVbB9MEm9KrA/exec";   
+//const GAS_URL = "https://script.google.com/macros/s/AKfycbwdwU_Tc1gjiyPE8_OeEp0LcPONu6AzyL9mbup6IlsHzd8_kUugETC5vihVbB9MEm9KrA/exec";   
    
 // ★ NS-04対策：共有秘密キー
 // GAS（コードds）の APP_SECRET と必ず同じ値にすること
@@ -969,6 +1074,9 @@ function showTab(tabId, btn){
     // 行き先タブに戻ったとき、区が選択済みなら施設リストを再描画
     const ward = document.getElementById("wardSelect").value;
     if (ward) loadPlaces();
+  } else if (tabId === "planTab") {
+    // お出かけ予定タブ: 区リスト同期 → 予定読み込み
+    _initPlanTab();
   } else if (tabId === "moodTab") {
     // 気分タブに切り替えたとき、施設リスト関連を非表示にする
     document.getElementById("placeList").innerHTML = "";
@@ -1256,9 +1364,9 @@ function showToast(msg, type, duration) {
 /* 初期化 */
 function init(){
    /*本番*/
-  //const LIFF_ID = "2009349674-TujIMf4h";
+  const LIFF_ID = "2009349674-TujIMf4h";
    /*test */
-  const LIFF_ID = "2009349674-MdsFU5pu";
+  //const LIFF_ID = "2009349674-MdsFU5pu";
 
 
   liff.init({
@@ -2569,6 +2677,213 @@ function renderAgeBreakdown(data){
 
 /* ===============================================
    CUSTOM SELECT MODULE ここまで
+   =============================================== */
+
+/* ===============================================
+   お出かけ予定タブ
+   =============================================== */
+
+let _plans = [];         // 取得済み予定データ
+let _planWardList = [];  // 区リスト（wardSelectと共有）
+
+/* タブ切替時に呼ばれる */
+function _initPlanTab() {
+  _loadPlans();
+  _syncPlanWardSelects();
+}
+
+/* wardSelectの区リストをplanWard・planWardFilterにも反映 */
+function _syncPlanWardSelects() {
+  const src = document.getElementById("wardSelect");
+  const targets = ["planWard", "planWardFilter"];
+  targets.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const current = sel.value;
+    // プレースホルダー以外をいったん削除
+    while (sel.options.length > 1) sel.remove(1);
+    Array.from(src.options).forEach(opt => {
+      if (!opt.value) return;
+      const o = document.createElement("option");
+      o.value = opt.value;
+      o.textContent = opt.textContent;
+      sel.appendChild(o);
+    });
+    sel.value = current; // 選択値を復元
+  });
+}
+
+/* 予定一覧を取得して描画 */
+async function _loadPlans() {
+  document.getElementById("planList").innerHTML =
+    "<div style='text-align:center;padding:4vw;color:#888;font-size:3.5vw;'>読み込み中…</div>";
+  try {
+    const plans = await callGAS("getPlans");
+    _plans = plans;
+    _renderPlans();
+  } catch(err) {
+    document.getElementById("planList").innerHTML =
+      "<div style='text-align:center;padding:4vw;color:#c00;font-size:3.5vw;'>取得に失敗しました</div>";
+    console.error("getPlans:", err);
+  }
+}
+
+/* フィルター適用して描画 */
+function _renderPlans() {
+  const filterWard = document.getElementById("planWardFilter").value;
+  const filtered   = filterWard
+    ? _plans.filter(p => p.ward === filterWard)
+    : _plans;
+
+  const el = document.getElementById("planList");
+  if (filtered.length === 0) {
+    el.innerHTML = "<div style='text-align:center;padding:6vw;color:#aaa;font-size:3.8vw;'>予定はまだありません</div>";
+    return;
+  }
+
+  // 日付ごとにグループ化
+  const byDate = new Map();
+  filtered.forEach(p => {
+    if (!byDate.has(p.date)) byDate.set(p.date, []);
+    byDate.get(p.date).push(p);
+  });
+
+  let html = "";
+  byDate.forEach((plans, date) => {
+    const d = new Date(date.replace(/\//g, "-"));
+    const weekDay = ["日","月","火","水","木","金","土"][d.getDay()];
+    const dateLabel = (d.getMonth()+1) + "/" + d.getDate() + "（" + weekDay + "）";
+
+    html += `<div style="margin-bottom:4vw;">
+      <div style="font-size:3.5vw;font-weight:bold;color:#FF8A00;
+        border-bottom:1px solid #FFE0B2;padding-bottom:1.5vw;margin-bottom:2vw;">
+        📅 ${_escHtml(dateLabel)}
+      </div>`;
+
+    plans.forEach(p => {
+      const isOwn = (p.userId === userId);
+      const ageBadge = p.age
+        ? `<span style="background:#FFF3E0;color:#FF8A00;font-size:3vw;
+             padding:1px 8px;border-radius:10px;margin-right:1vw;">${_escHtml(p.age)}</span>`
+        : "";
+      const delBtn = isOwn
+        ? `<button onclick="_deletePlan('${_escHtml(p.planId)}')" style="
+             float:right;background:none;border:1px solid #ddd;color:#aaa;
+             font-size:3vw;padding:1vw 2.5vw;border-radius:10px;cursor:pointer;
+             touch-action:manipulation;">削除</button>`
+        : "";
+
+      html += `<div style="background:#FFF;border-radius:2.5vw;
+        border:1px solid #E5E5E5;padding:3vw;margin-bottom:2vw;
+        box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+        ${delBtn}
+        <div style="font-size:3.8vw;font-weight:bold;color:#333;margin-bottom:1.5vw;">
+          ${p.time ? "🕐 " + _escHtml(p.time) + "〜 " : ""}${_escHtml(p.description)}
+        </div>
+        <div style="font-size:3.2vw;color:#888;">
+          📍 ${_escHtml(p.ward)}　${ageBadge}
+        </div>
+      </div>`;
+    });
+
+    html += "</div>";
+  });
+
+  el.innerHTML = html;
+}
+
+/* 登録フォームを開く */
+function _openPlanForm() {
+  // 日付の初期値：今日
+  const today = new Date();
+  const yyyy  = today.getFullYear();
+  const mm    = String(today.getMonth()+1).padStart(2,"0");
+  const dd    = String(today.getDate()).padStart(2,"0");
+  document.getElementById("planDate").value = yyyy + "-" + mm + "-" + dd;
+
+  // 日付の最大値：今日から1ヶ月後
+  const maxDate = new Date(today);
+  maxDate.setMonth(maxDate.getMonth() + 1);
+  const maxMm = String(maxDate.getMonth()+1).padStart(2,"0");
+  const maxDd = String(maxDate.getDate()).padStart(2,"0");
+  document.getElementById("planDate").min = yyyy + "-" + mm + "-" + dd;
+  document.getElementById("planDate").max =
+    maxDate.getFullYear() + "-" + maxMm + "-" + maxDd;
+
+  // 区プルダウンに現在の選択値を引き継ぐ
+  const currentWard = document.getElementById("wardSelect").value;
+  if (currentWard) document.getElementById("planWard").value = currentWard;
+
+  document.getElementById("planFormArea").style.display = "block";
+  document.getElementById("planFormArea").scrollIntoView({ behavior: "smooth" });
+}
+
+/* 登録フォームを閉じる */
+function _closePlanForm() {
+  document.getElementById("planFormArea").style.display = "none";
+  document.getElementById("planDate").value = "";
+  document.getElementById("planTime").value = "";
+  document.getElementById("planWard").value = "";
+  document.getElementById("planDesc").value = "";
+}
+
+/* 予定を送信 */
+async function _submitPlan() {
+  const date = document.getElementById("planDate").value;
+  const time = document.getElementById("planTime").value;
+  const ward = document.getElementById("planWard").value;
+  const desc = document.getElementById("planDesc").value.trim();
+
+  if (!date) { showToast("日付を選んでください"); return; }
+  if (!time) { showToast("時刻を選んでください"); return; }
+  if (!ward) { showToast("区を選んでください"); return; }
+  if (!desc) { showToast("行き先・イベント名を入力してください"); return; }
+
+  // ユーザーの年齢帯を取得（userInfoシートから）
+  const age = document.getElementById("ageSelect")
+    ? document.getElementById("ageSelect").value
+    : "";
+
+  try {
+    showLoading();
+    await callGAS("registerPlan", userId, date, time, ward, desc, age);
+    hideLoading();
+    _closePlanForm();
+    showToast("✅ 予定を登録しました！");
+    await _loadPlans(); // 一覧を更新
+  } catch(err) {
+    hideLoading();
+    showToast("❌ 登録に失敗しました");
+    console.error("registerPlan:", err);
+  }
+}
+
+/* 予定を削除 */
+async function _deletePlan(planId) {
+  try {
+    showLoading();
+    await callGAS("deletePlan", userId, planId);
+    hideLoading();
+    showToast("🗑️ 予定を削除しました");
+    await _loadPlans();
+  } catch(err) {
+    hideLoading();
+    showToast("❌ 削除に失敗しました");
+    console.error("deletePlan:", err);
+  }
+}
+
+/* XSS対策（プランタブ内用） */
+function _escHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/* ===============================================
+   お出かけ予定タブ ここまで
    =============================================== */
 
 init();
