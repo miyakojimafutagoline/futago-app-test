@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloudflare Workers 接続テスト</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  body { font-family: sans-serif; padding: 20px; background: #FFF8F2; }
+  h1 { color: #FF8A00; font-size: 5vw; }
+  #result { margin-top: 20px; padding: 15px; border-radius: 10px;
+    background: #FFF; border: 1px solid #E5E5E5; font-size: 4vw; line-height: 1.8; }
+  button { background: #FF8A00; color: #FFF; border: none;
+    padding: 3vw 6vw; border-radius: 8vw; font-size: 4.5vw;
+    margin-top: 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>🍒 Workers 接続テスト</h1>
+<div id="result">初期化中...</div>
+<button onclick="runTest()">スプシに書き込みテスト</button>
+
+<script>
+const WORKER_URL = "https://futago-worker.miyakojima-app.workers.dev";
+const LIFF_ID    = "2009349674-MdsFU5pu";
+
+let userId = "";
+
+async function init() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+    const profile = await liff.getProfile();
+    userId = profile.userId;
+    document.getElementById("result").innerHTML =
+      "✅ LIFF初期化成功<br>" +
+      "👤 userId: " + userId + "<br>" +
+      "📛 displayName: " + profile.displayName;
+  } catch(e) {
+    document.getElementById("result").innerHTML = "❌ LIFF初期化エラー: " + e.message;
+  }
+}
+
+async function runTest() {
+  if (!userId) {
+    document.getElementById("result").innerHTML = "❌ userIdが取得できていません";
+    return;
+  }
+
+  document.getElementById("result").innerHTML = "送信中...";
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: userId })
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      document.getElementById("result").innerHTML =
+        "✅ Cloudflare Workers → スプシ 書き込み成功！<br>" +
+        "👤 userId: " + data.userId;
+    } else {
+      document.getElementById("result").innerHTML =
+        "❌ エラー: " + JSON.stringify(data.error);
+    }
+  } catch(e) {
+    document.getElementById("result").innerHTML = "❌ 通信エラー: " + e.message;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
