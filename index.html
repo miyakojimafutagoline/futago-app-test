@@ -1085,6 +1085,13 @@ function showTab(tabId, btn){
     const ward = document.getElementById("wardSelect").value;
     if (ward) loadPlaces();
   } else if (tabId === "planTab") {
+    // ★ 施設リスト関連を非表示（placeTabと同じ処理）
+    document.getElementById("placeList").innerHTML = "";
+    document.getElementById("legendBottom").style.display = "none";
+    if (document.getElementById("yesterdayStats"))
+      document.getElementById("yesterdayStats").style.display = "none";
+    if (document.getElementById("yesterdayStatsBlock"))
+      document.getElementById("yesterdayStatsBlock").style.display = "none";
     _initPlanTab();
   } else if (tabId === "moodTab") {
     // 気分タブに切り替えたとき、施設リスト関連を非表示にする
@@ -2782,9 +2789,16 @@ function _renderPlans() {
           ⏰ ${_escHtml(date)} ${_escHtml(p.time)}<br>
           📍 ${_escHtml(p.description)}
         </div>
-        <div style="font-size:3.2vw;color:#888;">
+        <div style="font-size:3.2vw;color:#888;margin-bottom:1.5vw;">
           🏙️ ${_escHtml(p.ward)}　${ageBadge}
         </div>
+        <a href="https://maps.google.com/?q=${encodeURIComponent(p.ward + ' ' + p.description)}"
+           target="_blank" style="
+             display:inline-block;font-size:3vw;color:#FF8A00;
+             border:1px solid #FFE0B2;border-radius:10px;
+             padding:1vw 3vw;text-decoration:none;">
+          🗺️ Googleマップで見る
+        </a>
       </div>`;
     });
 
