@@ -466,20 +466,17 @@ h3{ font-size:4vw; margin-bottom:2vw; }
   <!-- ★ お出かけ予定タブ -->
   <div id="planTab" class="tab-content">
 
-    <!-- 絞り込み -->
-    <div style="margin-bottom:3vw;">
-      <select id="planWardFilter" onchange="_renderPlans()" style="
-        width:100%; font-size:4vw; padding:2vw;
-        border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
-      ">
-        <option value="">📍 すべての区を表示</option>
-      </select>
+    <!-- ① 説明文 -->
+    <div style="
+      background:#FFF3E0; border-radius:2.5vw;
+      padding:3vw; margin-bottom:4vw;
+      font-size:3.5vw; color:#555; line-height:1.7;
+    ">
+      📅 <b>これからのお出かけ予定を共有しましょう</b><br>
+      同じ日・同じ場所に行く予定の人を見つけよう！
     </div>
 
-    <!-- 予定一覧 -->
-    <div id="planList" style="margin-bottom:4vw;"></div>
-
-    <!-- 登録ボタン -->
+    <!-- ② 登録ボタン（フォームより上に配置） -->
     <div style="text-align:center; margin-bottom:4vw;">
       <button onclick="_openPlanForm()" style="
         background:#FF8A00; color:#FFF; border:none;
@@ -564,6 +561,19 @@ h3{ font-size:4vw; margin-bottom:2vw; }
         ">キャンセル</button>
       </div>
     </div>
+
+    <!-- 区で絞り込み -->
+    <div style="margin-bottom:3vw;">
+      <select id="planWardFilter" onchange="_renderPlans()" style="
+        width:100%; font-size:4vw; padding:2vw;
+        border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+      ">
+        <option value="">📍 すべての区を表示</option>
+      </select>
+    </div>
+
+    <!-- 予定一覧 -->
+    <div id="planList"></div>
 
   </div> <!-- /planTab -->
 
@@ -1075,7 +1085,6 @@ function showTab(tabId, btn){
     const ward = document.getElementById("wardSelect").value;
     if (ward) loadPlaces();
   } else if (tabId === "planTab") {
-    // お出かけ予定タブ: 区リスト同期 → 予定読み込み
     _initPlanTab();
   } else if (tabId === "moodTab") {
     // 気分タブに切り替えたとき、施設リスト関連を非表示にする
@@ -2683,37 +2692,31 @@ function renderAgeBreakdown(data){
    お出かけ予定タブ
    =============================================== */
 
-let _plans = [];         // 取得済み予定データ
-let _planWardList = [];  // 区リスト（wardSelectと共有）
+let _plans = [];
 
-/* タブ切替時に呼ばれる */
 function _initPlanTab() {
-  _loadPlans();
   _syncPlanWardSelects();
+  _loadPlans();
 }
 
-/* wardSelectの区リストをplanWard・planWardFilterにも反映 */
+/* wardSelectの区リストをplanWard・planWardFilterに反映 */
 function _syncPlanWardSelects() {
   const src = document.getElementById("wardSelect");
-  const targets = ["planWard", "planWardFilter"];
-  targets.forEach(id => {
+  ["planWard", "planWardFilter"].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
     const current = sel.value;
-    // プレースホルダー以外をいったん削除
     while (sel.options.length > 1) sel.remove(1);
     Array.from(src.options).forEach(opt => {
       if (!opt.value) return;
       const o = document.createElement("option");
-      o.value = opt.value;
-      o.textContent = opt.textContent;
+      o.value = opt.value; o.textContent = opt.textContent;
       sel.appendChild(o);
     });
-    sel.value = current; // 選択値を復元
+    sel.value = current;
   });
 }
 
-/* 予定一覧を取得して描画 */
 async function _loadPlans() {
   document.getElementById("planList").innerHTML =
     "<div style='text-align:center;padding:4vw;color:#888;font-size:3.5vw;'>読み込み中…</div>";
@@ -2728,14 +2731,11 @@ async function _loadPlans() {
   }
 }
 
-/* フィルター適用して描画 */
 function _renderPlans() {
   const filterWard = document.getElementById("planWardFilter").value;
-  const filtered   = filterWard
-    ? _plans.filter(p => p.ward === filterWard)
-    : _plans;
-
+  const filtered   = filterWard ? _plans.filter(p => p.ward === filterWard) : _plans;
   const el = document.getElementById("planList");
+
   if (filtered.length === 0) {
     el.innerHTML = "<div style='text-align:center;padding:6vw;color:#aaa;font-size:3.8vw;'>予定はまだありません</div>";
     return;
@@ -2750,9 +2750,10 @@ function _renderPlans() {
 
   let html = "";
   byDate.forEach((plans, date) => {
+    // ★ 日時表示修正: YYYY/MM/DD → 曜日付き
     const d = new Date(date.replace(/\//g, "-"));
     const weekDay = ["日","月","火","水","木","金","土"][d.getDay()];
-    const dateLabel = (d.getMonth()+1) + "/" + d.getDate() + "（" + weekDay + "）";
+    const dateLabel = date + "（" + weekDay + "）";
 
     html += `<div style="margin-bottom:4vw;">
       <div style="font-size:3.5vw;font-weight:bold;color:#FF8A00;
@@ -2764,7 +2765,7 @@ function _renderPlans() {
       const isOwn = (p.userId === userId);
       const ageBadge = p.age
         ? `<span style="background:#FFF3E0;color:#FF8A00;font-size:3vw;
-             padding:1px 8px;border-radius:10px;margin-right:1vw;">${_escHtml(p.age)}</span>`
+             padding:1px 8px;border-radius:10px;">${_escHtml(p.age)}</span>`
         : "";
       const delBtn = isOwn
         ? `<button onclick="_deletePlan('${_escHtml(p.planId)}')" style="
@@ -2778,10 +2779,11 @@ function _renderPlans() {
         box-shadow:0 1px 4px rgba(0,0,0,0.06);">
         ${delBtn}
         <div style="font-size:3.8vw;font-weight:bold;color:#333;margin-bottom:1.5vw;">
-          ${p.time ? "🕐 " + _escHtml(p.time) + "〜 " : ""}${_escHtml(p.description)}
+          ⏰ ${_escHtml(date)} ${_escHtml(p.time)}<br>
+          📍 ${_escHtml(p.description)}
         </div>
         <div style="font-size:3.2vw;color:#888;">
-          📍 ${_escHtml(p.ward)}　${ageBadge}
+          🏙️ ${_escHtml(p.ward)}　${ageBadge}
         </div>
       </div>`;
     });
@@ -2792,25 +2794,23 @@ function _renderPlans() {
   el.innerHTML = html;
 }
 
-/* 登録フォームを開く */
 function _openPlanForm() {
-  // 日付の初期値：今日
   const today = new Date();
   const yyyy  = today.getFullYear();
   const mm    = String(today.getMonth()+1).padStart(2,"0");
   const dd    = String(today.getDate()).padStart(2,"0");
-  document.getElementById("planDate").value = yyyy + "-" + mm + "-" + dd;
+  const todayStr = yyyy + "-" + mm + "-" + dd;
 
-  // 日付の最大値：今日から1ヶ月後
+  document.getElementById("planDate").value = todayStr;
+  document.getElementById("planDate").min   = todayStr;
+
   const maxDate = new Date(today);
   maxDate.setMonth(maxDate.getMonth() + 1);
-  const maxMm = String(maxDate.getMonth()+1).padStart(2,"0");
-  const maxDd = String(maxDate.getDate()).padStart(2,"0");
-  document.getElementById("planDate").min = yyyy + "-" + mm + "-" + dd;
   document.getElementById("planDate").max =
-    maxDate.getFullYear() + "-" + maxMm + "-" + maxDd;
+    maxDate.getFullYear() + "-" +
+    String(maxDate.getMonth()+1).padStart(2,"0") + "-" +
+    String(maxDate.getDate()).padStart(2,"0");
 
-  // 区プルダウンに現在の選択値を引き継ぐ
   const currentWard = document.getElementById("wardSelect").value;
   if (currentWard) document.getElementById("planWard").value = currentWard;
 
@@ -2818,7 +2818,6 @@ function _openPlanForm() {
   document.getElementById("planFormArea").scrollIntoView({ behavior: "smooth" });
 }
 
-/* 登録フォームを閉じる */
 function _closePlanForm() {
   document.getElementById("planFormArea").style.display = "none";
   document.getElementById("planDate").value = "";
@@ -2827,7 +2826,6 @@ function _closePlanForm() {
   document.getElementById("planDesc").value = "";
 }
 
-/* 予定を送信 */
 async function _submitPlan() {
   const date = document.getElementById("planDate").value;
   const time = document.getElementById("planTime").value;
@@ -2839,10 +2837,8 @@ async function _submitPlan() {
   if (!ward) { showToast("区を選んでください"); return; }
   if (!desc) { showToast("行き先・イベント名を入力してください"); return; }
 
-  // ユーザーの年齢帯を取得（userInfoシートから）
   const age = document.getElementById("ageSelect")
-    ? document.getElementById("ageSelect").value
-    : "";
+    ? document.getElementById("ageSelect").value : "";
 
   try {
     showLoading();
@@ -2850,7 +2846,7 @@ async function _submitPlan() {
     hideLoading();
     _closePlanForm();
     showToast("✅ 予定を登録しました！");
-    await _loadPlans(); // 一覧を更新
+    await _loadPlans();
   } catch(err) {
     hideLoading();
     showToast("❌ 登録に失敗しました");
@@ -2858,7 +2854,6 @@ async function _submitPlan() {
   }
 }
 
-/* 予定を削除 */
 async function _deletePlan(planId) {
   try {
     showLoading();
@@ -2873,7 +2868,6 @@ async function _deletePlan(planId) {
   }
 }
 
-/* XSS対策（プランタブ内用） */
 function _escHtml(str) {
   return String(str || "")
     .replace(/&/g, "&amp;")
