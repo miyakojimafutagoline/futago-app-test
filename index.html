@@ -1079,10 +1079,10 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 <script>
 // ★ GASのエンドポイントURL（デプロイ後に更新不要）
 /* 本番用 */
-//const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbygvecBlLKQYdcsn-pKCWfFcjKIkdL14ktbvSwUUcs5n8FHYOCl63PctKPBgw_jh_7rTw/exec";
 
 /*テスト用*/
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwdwU_Tc1gjiyPE8_OeEp0LcPONu6AzyL9mbup6IlsHzd8_kUugETC5vihVbB9MEm9KrA/exec";   
+//const GAS_URL = "https://script.google.com/macros/s/AKfycbwdwU_Tc1gjiyPE8_OeEp0LcPONu6AzyL9mbup6IlsHzd8_kUugETC5vihVbB9MEm9KrA/exec";   
    
 // ★ NS-04対策：共有秘密キー
 // GAS（コードds）の APP_SECRET と必ず同じ値にすること
@@ -1423,9 +1423,9 @@ function showToast(msg, type, duration) {
 /* 初期化 */
 function init(){
    /*本番*/
-  //const LIFF_ID = "2009349674-TujIMf4h";
+  const LIFF_ID = "2009349674-TujIMf4h";
    /*test */
-  const LIFF_ID = "2009349674-MdsFU5pu";
+  //const LIFF_ID = "2009349674-MdsFU5pu";
 
 
   liff.init({
@@ -2919,7 +2919,7 @@ function _renderPlans() {
   el.innerHTML = html;
 }
 
-function _openPlanForm() {
+async function _openPlanForm() {
   const today = new Date();
   const yyyy  = today.getFullYear();
   const mm    = String(today.getMonth()+1).padStart(2,"0");
@@ -2937,7 +2937,10 @@ function _openPlanForm() {
     String(maxDate.getDate()).padStart(2,"0");
 
   const currentWard = document.getElementById("wardSelect").value;
-  if (currentWard) document.getElementById("planWard").value = currentWard;
+  if (currentWard) {
+    document.getElementById("planWard").value = currentWard;
+    await _onPlanWardChange(); // ★ 区が設定済みなら施設を自動ロード
+  }
 
   document.getElementById("planFormArea").style.display = "block";
   document.getElementById("planFormArea").scrollIntoView({ behavior: "smooth" });
