@@ -468,12 +468,17 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
     <!-- ① 説明文 -->
     <div style="
-      background:#FFF3E0; border-radius:2.5vw;
-      padding:3vw; margin-bottom:4vw;
-      font-size:3.5vw; color:#555; line-height:1.7;
+      background:#FFF8D8; border:1px solid #F0D890;
+      border-radius:2.5vw; padding:3vw; margin-bottom:4vw;
+      font-size:3.6vw; color:#555; line-height:1.55;
     ">
-      📅 <b>これからのお出かけ予定を共有しましょう</b><br>
-      同じ日・同じ場所に行く予定の人を見つけよう！
+      <div style="display:flex; gap:2vw; align-items:flex-start;">
+        <div style="width:1vw; background:#FF8A00; border-radius:1vw; flex-shrink:0; margin-top:1vw; align-self:stretch;"></div>
+        <div>
+          📅 <b>これからのお出かけ予定を共有しましょう</b><br>
+          同じ日・同じ場所に行く予定の人を見つけよう！
+        </div>
+      </div>
     </div>
 
     <!-- ② 登録ボタン（フォームより上に配置） -->
@@ -488,7 +493,8 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
     <!-- 登録フォーム（初期非表示） -->
     <div id="planFormArea" style="display:none;
-      background:#FFF8F0; border:2px solid #FF8A00;
+      background:#FFF8D8; border:1px solid #F0D890;
+      border-top:3px solid #FF8A00;
       border-radius:3vw; padding:4vw; margin-bottom:4vw;
     ">
       <div style="font-size:4.2vw; font-weight:bold; color:#FF8A00; margin-bottom:3vw;">
@@ -607,7 +613,11 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
     <!-- 区で絞り込み -->
     <div style="margin-bottom:1vw;">
-      <div style="font-size:3.5vw; font-weight:bold; color:#555; margin-bottom:2vw;">
+      <div style="
+        font-size:3.8vw; font-weight:bold; color:#FF8A00;
+        border-bottom:2px solid #FFE0B2; padding-bottom:2vw; margin-bottom:2vw;
+        display:flex; align-items:center; gap:2vw;">
+        <div style="width:1vw; height:4vw; background:#FF8A00; border-radius:1vw;"></div>
         📋 みんなのお出かけ予定
       </div>
       <select id="planWardFilter" onchange="_renderPlans()" style="
@@ -2927,36 +2937,42 @@ function _renderPlans() {
              touch-action:manipulation;">削除</button>`
         : "";
 
-      html += `<div style="background:#FFF;border-radius:2.5vw;
-        border:1px solid #E5E5E5;padding:3vw;margin-bottom:2vw;
-        box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+      html += `<div style="
+        display:flex; align-items:flex-start;
+        background:#FFF3E0; padding:3vw; margin-bottom:3vw;
+        border-radius:3vw; border:1px solid #E5E5E5;
+        box-shadow:0 1vw 2vw rgba(0,0,0,0.05); position:relative;">
+        <div style="flex-grow:1;">
+          <div style="font-size:3.5vw; font-weight:bold; margin-bottom:1.5vw; color:#333;">
+            ⏰ ${_escHtml(date)} ${_escHtml(p.time)}
+          </div>
+          <div style="font-size:3.5vw; font-weight:bold; margin-bottom:1vw; color:#FF8A00;">
+            📍 ${_escHtml(p.facilityName)}${p.eventName ? " <span style='color:#555;font-weight:normal;'>での<b>" + _escHtml(p.eventName) + "</b></span>" : ""}
+          </div>
+          ${p.address ? `<div style="font-size:3.2vw;color:#888;margin-bottom:0.5vw;">🏠 ${_escHtml(p.address)}</div>` : ""}
+          ${p.tel ? `<div style="font-size:3.2vw;color:#888;margin-bottom:0.5vw;">📞 <a href="tel:${_escHtml(p.tel)}" style="color:#FF8A00;">${_escHtml(p.tel)}</a></div>` : ""}
+          <div style="font-size:3.2vw;color:#888;margin-bottom:2vw;">
+            🏙️ ${_escHtml(p.ward)}　${ageBadge}
+          </div>
+          <div style="display:flex; gap:2vw; flex-wrap:wrap; align-items:center;">
+            <a href="https://maps.google.com/?q=${encodeURIComponent((p.address || (p.ward + ' ' + p.facilityName)))}"
+               target="_blank" style="
+                 display:inline-block;font-size:3vw;color:#FF8A00;
+                 border:1px solid #FFE0B2;border-radius:10px;
+                 padding:1vw 3vw;text-decoration:none;">
+              🗺️ マップ
+            </a>
+            ${p.userId !== userId ? `<button onclick="_reactionPlan('${_escHtml(p.planId)}')" style="
+              font-size:3vw;cursor:pointer;touch-action:manipulation;
+              border-radius:10px;padding:1vw 3vw;
+              border:1px solid ${p.hasReacted ? '#FF8A00' : '#ddd'};
+              background:${p.hasReacted ? '#FFF3E0' : '#FFF'};
+              color:${p.hasReacted ? '#FF8A00' : '#aaa'};">
+              🙋 行きたい${p.reactionCount > 0 ? ' ' + p.reactionCount + '人' : ''}
+            </button>` : p.reactionCount > 0 ? `<span style="font-size:3vw;color:#FF8A00;">🙋 ${p.reactionCount}人が行きたい！</span>` : ""}
+          </div>
+        </div>
         ${delBtn}
-        <div style="font-size:3.8vw;font-weight:bold;color:#333;margin-bottom:1.5vw;">
-          ⏰ ${_escHtml(date)} ${_escHtml(p.time)}
-        </div>
-        <div style="font-size:3.8vw;color:#333;margin-bottom:1vw;">
-          📍 ${_escHtml(p.facilityName)}${p.eventName ? " での<b>" + _escHtml(p.eventName) + "</b>" : ""}
-        </div>
-        ${p.address ? `<div style="font-size:3.2vw;color:#888;margin-bottom:0.5vw;">🏠 ${_escHtml(p.address)}</div>` : ""}
-        ${p.tel     ? `<div style="font-size:3.2vw;color:#888;margin-bottom:0.5vw;">📞 <a href="tel:${_escHtml(p.tel)}" style="color:#FF8A00;">${_escHtml(p.tel)}</a></div>` : ""}
-        <div style="font-size:3.2vw;color:#888;margin-bottom:1.5vw;">
-          🏙️ ${_escHtml(p.ward)}　${ageBadge}
-        </div>
-        <a href="https://maps.google.com/?q=${encodeURIComponent((p.address || (p.ward + ' ' + p.facilityName)))}"
-           target="_blank" style="
-             display:inline-block;font-size:3vw;color:#FF8A00;
-             border:1px solid #FFE0B2;border-radius:10px;
-             padding:1vw 3vw;text-decoration:none;margin-right:2vw;">
-          🗺️ Googleマップで見る
-        </a>
-        ${p.userId !== userId ? `<button onclick="_reactionPlan('${_escHtml(p.planId)}')" style="
-          font-size:3vw;cursor:pointer;touch-action:manipulation;
-          border-radius:10px;padding:1vw 3vw;
-          border:1px solid ${p.hasReacted ? '#FF8A00' : '#ddd'};
-          background:${p.hasReacted ? '#FFF3E0' : '#FFF'};
-          color:${p.hasReacted ? '#FF8A00' : '#aaa'};">
-          🙋 行きたい${p.reactionCount > 0 ? ' ' + p.reactionCount + '人' : ''}
-        </button>` : p.reactionCount > 0 ? `<span style="font-size:3vw;color:#FF8A00;">🙋 ${p.reactionCount}人が行きたい！</span>` : ""}
       </div>`;
     });
 
