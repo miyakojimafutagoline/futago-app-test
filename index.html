@@ -606,7 +606,10 @@ h3{ font-size:4vw; margin-bottom:2vw; }
     </div>
 
     <!-- 区で絞り込み -->
-    <div style="margin-bottom:3vw;">
+    <div style="margin-bottom:1vw;">
+      <div style="font-size:3.5vw; font-weight:bold; color:#555; margin-bottom:2vw;">
+        📋 みんなのお出かけ予定
+      </div>
       <select id="planWardFilter" onchange="_renderPlans()" style="
         width:100%; font-size:4vw; padding:2vw;
         border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
@@ -622,6 +625,9 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
   <!-- ★ 行き先タブ -->
   <div id="placeTab" class="tab-content">
+
+    <!-- ★ お出かけ予定リアクションバナー -->
+    <div id="planBannerArea" style="display:none; margin-bottom:3vw;"></div>
 
     <!-- ★ 自分の投票先の状況バナー（施設投票済みのときだけ表示） -->
     <div id="myPlaceStatus" style="display:none;
@@ -1549,6 +1555,9 @@ async function _initApp(){
       document.getElementById("feedbackText").innerText = feedbackMsg;
       document.getElementById("feedbackCard").style.display = "block";
     }
+
+    // ⑦ お出かけ予定バナー（自分に関係する予定にリアクションがある場合）
+    _renderPlanBanners(init.planBanners || []);
 
     // ⑦ 区の自動選択（wardList・todayAge両方揃ったので実行）
     _tryAutoLoadPlaces();
@@ -2831,11 +2840,41 @@ function _openMapForPlan() {
   window.open("https://maps.google.com/?q=" + query, "_blank");
 }
 
+/* プランバナーを描画 */
+function _renderPlanBanners(banners) {
+  const area = document.getElementById("planBannerArea");
+  if (!area) return;
+  if (!banners || banners.length === 0) { area.style.display = "none"; return; }
+
+  let html = "";
+  banners.forEach(b => {
+    const d = new Date(b.date.replace(/\//g, "-"));
+    const weekDay = ["日","月","火","水","木","金","土"][d.getDay()];
+    const label = b.date + "（" + weekDay + "）" + (b.time ? " " + b.time : "");
+    const msg = b.isOwner
+      ? "🙋 あなたの予定「" + _escHtml(b.facilityName) + "」に行きたい人がいます！"
+      : "🙋 " + _escHtml(b.facilityName) + "に行く予定の人がいます！";
+
+    html += `<div style="
+      background:#F0FFF0; border:1px solid #66BB6A;
+      border-left:4px solid #43A047;
+      border-radius:2.5vw; padding:3vw; margin-bottom:2vw;
+      font-size:3.5vw; line-height:1.6; color:#2E7D32;
+    ">
+      ${msg}<br>
+      <span style="font-size:3vw; color:#555;">📅 ${_escHtml(label)}・📍 ${_escHtml(b.ward)}　${b.reactionCount}人が反応中</span>
+    </div>`;
+  });
+
+  area.innerHTML = html;
+  area.style.display = "block";
+}
+
 async function _loadPlans() {
   document.getElementById("planList").innerHTML =
     "<div style='text-align:center;padding:4vw;color:#888;font-size:3.5vw;'>読み込み中…</div>";
   try {
-    const plans = await callGAS("getPlans");
+    const plans = await callGAS("getPlans", userId);
     _plans = plans;
     _renderPlans();
   } catch(err) {
@@ -2907,9 +2946,17 @@ function _renderPlans() {
            target="_blank" style="
              display:inline-block;font-size:3vw;color:#FF8A00;
              border:1px solid #FFE0B2;border-radius:10px;
-             padding:1vw 3vw;text-decoration:none;">
+             padding:1vw 3vw;text-decoration:none;margin-right:2vw;">
           🗺️ Googleマップで見る
         </a>
+        ${p.userId !== userId ? `<button onclick="_reactionPlan('${_escHtml(p.planId)}')" style="
+          font-size:3vw;cursor:pointer;touch-action:manipulation;
+          border-radius:10px;padding:1vw 3vw;
+          border:1px solid ${p.hasReacted ? '#FF8A00' : '#ddd'};
+          background:${p.hasReacted ? '#FFF3E0' : '#FFF'};
+          color:${p.hasReacted ? '#FF8A00' : '#aaa'};">
+          🙋 行きたい${p.reactionCount > 0 ? ' ' + p.reactionCount + '人' : ''}
+        </button>` : p.reactionCount > 0 ? `<span style="font-size:3vw;color:#FF8A00;">🙋 ${p.reactionCount}人が行きたい！</span>` : ""}
       </div>`;
     });
 
@@ -3013,6 +3060,23 @@ async function _deletePlan(planId) {
     hideLoading();
     showToast("❌ 削除に失敗しました");
     console.error("deletePlan:", err);
+  }
+}
+
+async function _reactionPlan(planId) {
+  try {
+    const age = document.getElementById("ageSelect")
+      ? document.getElementById("ageSelect").value : "";
+    showLoading();
+    const result = await callGAS("reactionPlan", userId, planId, age);
+    hideLoading();
+    const msg = result.hasReacted ? "🙋 行きたい！を送りました" : "取り消しました";
+    showToast(msg);
+    await _loadPlans();
+  } catch(err) {
+    hideLoading();
+    showToast("❌ リアクションに失敗しました");
+    console.error("reactionPlan:", err);
   }
 }
 
