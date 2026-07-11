@@ -527,7 +527,7 @@ h3{ font-size:4vw; margin-bottom:2vw; }
       <!-- 区 -->
       <div style="margin-bottom:3vw;">
         <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">区</div>
-        <select id="planWard" style="
+        <select id="planWard" onchange="_onPlanWardChange()" style="
           width:100%; font-size:4vw; padding:2vw;
           border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
         ">
@@ -535,14 +535,57 @@ h3{ font-size:4vw; margin-bottom:2vw; }
         </select>
       </div>
 
-      <!-- 行き先・イベント名 -->
+      <!-- 行き先 -->
       <div style="margin-bottom:3vw;">
-        <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">行き先・イベント名</div>
-        <textarea id="planDesc" rows="3" placeholder="例：子育てプラザ ママヨガ" style="
+        <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">行き先</div>
+        <select id="planFacilitySelect" onchange="_onFacilitySelectChange()" style="
           width:100%; font-size:4vw; padding:2vw;
           border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
-          resize:none; font-family:inherit; line-height:1.5;
-        "></textarea>
+        ">
+          <option value="">区を先に選んでください</option>
+        </select>
+      </div>
+
+      <!-- その他選択時：施設名・住所・電話 -->
+      <div id="planOtherArea" style="display:none;">
+        <div style="margin-bottom:2vw;">
+          <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">施設名・場所</div>
+          <input type="text" id="planFacilityName" placeholder="例：〇〇公園、△△カフェ" style="
+            width:100%; font-size:4vw; padding:2vw;
+            border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+          ">
+        </div>
+        <div style="margin-bottom:2vw;">
+          <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">住所（任意）</div>
+          <input type="text" id="planAddress" placeholder="例：大阪市都島区..." style="
+            width:100%; font-size:4vw; padding:2vw;
+            border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+          ">
+        </div>
+        <div style="margin-bottom:2vw;">
+          <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">電話番号（任意）</div>
+          <input type="tel" id="planTel" placeholder="例：06-XXXX-XXXX" style="
+            width:100%; font-size:4vw; padding:2vw;
+            border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+          ">
+        </div>
+        <div style="margin-bottom:3vw; text-align:center;">
+          <button onclick="_openMapForPlan()" style="
+            background:#FFF; color:#FF8A00;
+            border:2px solid #FF8A00; border-radius:6vw;
+            padding:2.5vw 5vw; font-size:3.8vw; cursor:pointer;
+            touch-action:manipulation;
+          ">🗺️ Googleマップで場所を確認</button>
+        </div>
+      </div>
+
+      <!-- イベント名（任意） -->
+      <div style="margin-bottom:3vw;">
+        <div style="font-size:3.5vw; color:#555; margin-bottom:1vw;">イベント名（任意）</div>
+        <input type="text" id="planEventName" placeholder="例：ママヨガ、誕生会" style="
+          width:100%; font-size:4vw; padding:2vw;
+          border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
+        ">
       </div>
 
       <!-- ボタン -->
@@ -2724,6 +2767,70 @@ function _syncPlanWardSelects() {
   });
 }
 
+/* 区変更時：施設プルダウンを更新 */
+async function _onPlanWardChange() {
+  const ward = document.getElementById("planWard").value;
+  const sel  = document.getElementById("planFacilitySelect");
+  sel.innerHTML = "<option value=''>読み込み中…</option>";
+  document.getElementById("planOtherArea").style.display = "none";
+
+  if (!ward) {
+    sel.innerHTML = "<option value=''>区を先に選んでください</option>";
+    return;
+  }
+
+  try {
+    const facilities = await callGAS("getFacilityNamesByWard", ward);
+    sel.innerHTML = "<option value=''>行き先を選択</option>";
+    facilities.forEach(f => {
+      const o = document.createElement("option");
+      o.value = JSON.stringify({ name: f.name, address: f.address, tel: f.tel });
+      o.textContent = f.name;
+      sel.appendChild(o);
+    });
+    // 「その他」を末尾に追加
+    const other = document.createElement("option");
+    other.value = "__other__";
+    other.textContent = "その他（自由入力）";
+    sel.appendChild(other);
+  } catch(err) {
+    sel.innerHTML = "<option value=''>取得失敗</option>";
+    console.error("getFacilityNamesByWard:", err);
+  }
+}
+
+/* 施設選択変更時 */
+function _onFacilitySelectChange() {
+  const val = document.getElementById("planFacilitySelect").value;
+  const otherArea = document.getElementById("planOtherArea");
+
+  if (val === "__other__") {
+    otherArea.style.display = "block";
+    document.getElementById("planFacilityName").value = "";
+    document.getElementById("planAddress").value = "";
+    document.getElementById("planTel").value = "";
+  } else if (val && val !== "") {
+    otherArea.style.display = "none";
+    // 選択済み施設の情報をその他欄にも保持（送信時に使う）
+    try {
+      const f = JSON.parse(val);
+      document.getElementById("planFacilityName").value = f.name || "";
+      document.getElementById("planAddress").value = f.address || "";
+      document.getElementById("planTel").value = f.tel || "";
+    } catch(e) {}
+  } else {
+    otherArea.style.display = "none";
+  }
+}
+
+/* Googleマップで場所を確認 */
+function _openMapForPlan() {
+  const ward = document.getElementById("planWard").value || "";
+  const name = document.getElementById("planFacilityName").value || "";
+  const query = encodeURIComponent(ward + " " + name);
+  window.open("https://maps.google.com/?q=" + query, "_blank");
+}
+
 async function _loadPlans() {
   document.getElementById("planList").innerHTML =
     "<div style='text-align:center;padding:4vw;color:#888;font-size:3.5vw;'>読み込み中…</div>";
@@ -2786,13 +2893,17 @@ function _renderPlans() {
         box-shadow:0 1px 4px rgba(0,0,0,0.06);">
         ${delBtn}
         <div style="font-size:3.8vw;font-weight:bold;color:#333;margin-bottom:1.5vw;">
-          ⏰ ${_escHtml(date)} ${_escHtml(p.time)}<br>
-          📍 ${_escHtml(p.description)}
+          ⏰ ${_escHtml(date)} ${_escHtml(p.time)}
         </div>
+        <div style="font-size:3.8vw;color:#333;margin-bottom:1vw;">
+          📍 ${_escHtml(p.facilityName)}${p.eventName ? " での<b>" + _escHtml(p.eventName) + "</b>" : ""}
+        </div>
+        ${p.address ? `<div style="font-size:3.2vw;color:#888;margin-bottom:0.5vw;">🏠 ${_escHtml(p.address)}</div>` : ""}
+        ${p.tel     ? `<div style="font-size:3.2vw;color:#888;margin-bottom:0.5vw;">📞 <a href="tel:${_escHtml(p.tel)}" style="color:#FF8A00;">${_escHtml(p.tel)}</a></div>` : ""}
         <div style="font-size:3.2vw;color:#888;margin-bottom:1.5vw;">
           🏙️ ${_escHtml(p.ward)}　${ageBadge}
         </div>
-        <a href="https://maps.google.com/?q=${encodeURIComponent(p.ward + ' ' + p.description)}"
+        <a href="https://maps.google.com/?q=${encodeURIComponent((p.address || (p.ward + ' ' + p.facilityName)))}"
            target="_blank" style="
              display:inline-block;font-size:3vw;color:#FF8A00;
              border:1px solid #FFE0B2;border-radius:10px;
@@ -2837,26 +2948,46 @@ function _closePlanForm() {
   document.getElementById("planDate").value = "";
   document.getElementById("planTime").value = "";
   document.getElementById("planWard").value = "";
-  document.getElementById("planDesc").value = "";
+  document.getElementById("planFacilitySelect").innerHTML = "<option value=''>区を先に選んでください</option>";
+  document.getElementById("planFacilityName").value = "";
+  document.getElementById("planAddress").value = "";
+  document.getElementById("planTel").value = "";
+  document.getElementById("planEventName").value = "";
+  document.getElementById("planOtherArea").style.display = "none";
 }
 
 async function _submitPlan() {
-  const date = document.getElementById("planDate").value;
-  const time = document.getElementById("planTime").value;
-  const ward = document.getElementById("planWard").value;
-  const desc = document.getElementById("planDesc").value.trim();
+  const date      = document.getElementById("planDate").value;
+  const time      = document.getElementById("planTime").value;
+  const ward      = document.getElementById("planWard").value;
+  const selVal    = document.getElementById("planFacilitySelect").value;
+  const eventName = document.getElementById("planEventName").value.trim();
 
-  if (!date) { showToast("日付を選んでください"); return; }
-  if (!time) { showToast("時刻を選んでください"); return; }
-  if (!ward) { showToast("区を選んでください"); return; }
-  if (!desc) { showToast("行き先・イベント名を入力してください"); return; }
+  if (!date)   { showToast("日付を選んでください"); return; }
+  if (!time)   { showToast("時刻を選んでください"); return; }
+  if (!ward)   { showToast("区を選んでください"); return; }
+  if (!selVal) { showToast("行き先を選んでください"); return; }
+
+  // 施設名・住所・電話を取得
+  let facilityName = "", address = "", tel = "";
+  if (selVal === "__other__") {
+    facilityName = document.getElementById("planFacilityName").value.trim();
+    address      = document.getElementById("planAddress").value.trim();
+    tel          = document.getElementById("planTel").value.trim();
+    if (!facilityName) { showToast("施設名・場所を入力してください"); return; }
+  } else {
+    try {
+      const f = JSON.parse(selVal);
+      facilityName = f.name || ""; address = f.address || ""; tel = f.tel || "";
+    } catch(e) { facilityName = selVal; }
+  }
 
   const age = document.getElementById("ageSelect")
     ? document.getElementById("ageSelect").value : "";
 
   try {
     showLoading();
-    await callGAS("registerPlan", userId, date, time, ward, desc, age);
+    await callGAS("registerPlan", userId, date, time, ward, facilityName, address, tel, eventName, age);
     hideLoading();
     _closePlanForm();
     showToast("✅ 予定を登録しました！");
