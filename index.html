@@ -466,17 +466,22 @@ h3{ font-size:4vw; margin-bottom:2vw; }
   <!-- ★ お出かけ予定タブ -->
   <div id="planTab" class="tab-content">
 
-    <!-- ① 説明文 -->
+    <!-- ① 説明文 + みんなのお出かけ予定見出しを黄色枠に統合 -->
     <div style="
       background:#FFF8D8; border:1px solid #F0D890;
       border-radius:2.5vw; padding:3vw; margin-bottom:4vw;
-      font-size:3.6vw; color:#555; line-height:1.55;
+      line-height:1.55;
     ">
+      <div style="display:flex; gap:2vw; align-items:flex-start; margin-bottom:2vw;">
+        <div style="width:1vw; background:#FF8A00; border-radius:1vw; flex-shrink:0; align-self:stretch;"></div>
+        <div style="font-size:4.4vw; font-weight:bold;">
+          📅 お出かけ予定を共有しよう
+        </div>
+      </div>
       <div style="display:flex; gap:2vw; align-items:flex-start;">
-        <div style="width:1vw; background:#FF8A00; border-radius:1vw; flex-shrink:0; margin-top:1vw; align-self:stretch;"></div>
-        <div>
-          📅 <b>これからのお出かけ予定を共有しましょう</b><br>
-          同じ日・同じ場所に行く予定の人を見つけよう！
+        <div style="width:1vw; background:#FF8A00; border-radius:1vw; flex-shrink:0; align-self:stretch;"></div>
+        <div style="font-size:4.4vw; font-weight:bold;">
+          📋 みんなのお出かけ予定
         </div>
       </div>
     </div>
@@ -613,13 +618,6 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
     <!-- 区で絞り込み -->
     <div style="margin-bottom:1vw;">
-      <div style="
-        font-size:3.8vw; font-weight:bold; color:#FF8A00;
-        border-bottom:2px solid #FFE0B2; padding-bottom:2vw; margin-bottom:2vw;
-        display:flex; align-items:center; gap:2vw;">
-        <div style="width:1vw; height:4vw; background:#FF8A00; border-radius:1vw;"></div>
-        📋 みんなのお出かけ予定
-      </div>
       <select id="planWardFilter" onchange="_renderPlans()" style="
         width:100%; font-size:4vw; padding:2vw;
         border-radius:2vw; border:1px solid #E5E5E5; background:#FFF;
