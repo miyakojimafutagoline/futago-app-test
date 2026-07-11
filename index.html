@@ -472,23 +472,38 @@ h3{ font-size:4vw; margin-bottom:2vw; }
       border-radius:2.5vw; padding:3vw; margin-bottom:4vw;
       line-height:1.55;
     ">
-      <div style="display:flex; gap:2vw; align-items:flex-start; margin-bottom:2vw;">
-        <div style="width:1vw; background:#FF8A00; border-radius:1vw; flex-shrink:0; align-self:stretch;"></div>
-        <div style="font-size:4.4vw; font-weight:bold;">
-          📅 お出かけ予定を共有しよう
-        </div>
-      </div>
       <div style="display:flex; gap:2vw; align-items:flex-start;">
+        <!-- ★ 縦棒を1本に統合 -->
         <div style="width:1vw; background:#FF8A00; border-radius:1vw; flex-shrink:0; align-self:stretch;"></div>
-        <div style="font-size:3vw; color:#FF8A00; font-weight:bold; letter-spacing:0.05em; line-height:1.7;">
-          自分の予定を登録したり、「📋みんなのお出かけ予定」から、<br>
-          同じ日/場所に行く人を見つけてリアクションしよう！<br>
-          多胎ママパパに会えるかも✨
+        <div>
+          <div style="font-size:4.4vw; font-weight:bold; margin-bottom:2vw;">
+            📅 お出かけ予定を共有しよう
+          </div>
+          <div style="font-size:3vw; color:#FF8A00; font-weight:bold; letter-spacing:0.05em; line-height:1.7;">
+            自分の予定を登録したり、「📋みんなのお出かけ予定」から、同じ日/場所に行く人を見つけてリアクションしてね！<br>
+            多胎ママパパに会えるかも✨
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ② 登録ボタン（フォームより上に配置） -->
+    <!-- ④ 予定を登録するセクション見出し -->
+    <div style="
+      background:#FFF8D8; border:1px solid #F0D890;
+      border-top:3px solid #FF8A00;
+      border-radius:2.5vw; padding:3vw; margin-bottom:3vw;
+    ">
+      <div style="font-size:3.8vw; font-weight:bold; color:#FF8A00; margin-bottom:2vw;
+        display:flex; align-items:center; gap:2vw;">
+        <div style="width:1vw; height:4vw; background:#FF8A00; border-radius:1vw;"></div>
+        📋 予定を登録してみる
+      </div>
+      <div style="font-size:3vw; color:#888; line-height:1.7;">
+        予定を登録すると、「📋 みんなのお出かけ予定」に表示されるよ！同じ行き先の人がいたらリアクションしてもらおう
+      </div>
+    </div>
+
+    <!-- ② 登録ボタン -->
     <div style="text-align:center; margin-bottom:4vw;">
       <button onclick="_openPlanForm()" style="
         background:#FF8A00; color:#FFF; border:none;
@@ -619,7 +634,7 @@ h3{ font-size:4vw; margin-bottom:2vw; }
     </div>
 
     <!-- 区で絞り込み -->
-    <div style="border-top:2px solid #FFE0B2; margin:4vw 0 4vw; padding-top:4vw;">
+    <div style="border-top:2px solid #FFE0B2; margin:6vw 0 4vw; padding-top:5vw;">
       <div style="
         font-size:3.8vw; font-weight:bold; color:#FF8A00;
         border-bottom:2px solid #FFE0B2; padding-bottom:2vw; margin-bottom:2vw;
