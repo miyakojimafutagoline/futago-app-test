@@ -91,6 +91,7 @@
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   padding:3vw;
+  padding-bottom: 74px; /* ★ ボトムナビ分の余白 */
   background:#FFFFFF; /* 白 */
   font-size:3.5vw;
   line-height:1.4;
@@ -103,29 +104,55 @@ h2{ font-size:4.8vw; margin-top:5vw; margin-bottom:3vw; }
 h3{ font-size:4vw; margin-bottom:2vw; }
 
 /* ★ タブ */
-.tab-container{
-  display:flex;
-  margin:4vw 0;
-  border-bottom:2px solid #E5E5E5; /* 薄グレー */
-}
 .tab-content{
   display: none;
-  overflow: hidden;
 }
-.tab-button{
-  flex:1;
-  padding:2.5vw 0;
-  font-size:4vw;
-  background:#F5F5F5; /* 薄グレー */
-  border:none;
-  cursor:pointer;
-  color:#333;
+
+/* ===== ★ ボトムナビゲーション（ウォームパステルミニマリズム） ===== */
+#bottomNav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 62px;
+  background: #FDFAF6;
+  border-top: 1px solid #EDE8E2;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 8px;
+  z-index: 200;
+  -webkit-user-select: none;
+  user-select: none;
 }
-.tab-button.active{
-  background:#FFFFFF;
-  border-bottom:3px solid #FF8A00; /* オレンジ */
-  font-weight:bold;
-  color:#FF8A00;
+.bnav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.bnav-icon {
+  font-size: 5.5vw;
+  line-height: 1;
+  filter: grayscale(1) opacity(0.45);
+}
+.bnav-icon.active { filter: none; }
+.bnav-label {
+  font-size: 2.6vw;
+  color: #B0A099;
+  white-space: nowrap;
+}
+.bnav-label.active {
+  color: #FF8C55;
+  font-weight: bold;
+}
+.bnav-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #FF8C55;
+  margin-top: 1px;
 }
 
 /* 気分カード（超コンパクト） */
@@ -449,12 +476,24 @@ h3{ font-size:4vw; margin-bottom:2vw; }
 
 <div id="app" style="display:none">
 
-  <!-- ★ 最上部タブ -->
-  <div class="tab-container">
-    <button class="tab-button active" onclick="showTab('placeTab', this)">今日どこか行く？</button>
-    <button class="tab-button" onclick="showTab('planTab', this)">お出かけ予定</button>
-    <button class="tab-button" onclick="showTab('moodTab', this)">今日の気分は？</button>
-  </div>
+  <!-- ★ ボトムナビゲーション -->
+  <nav id="bottomNav">
+    <div class="bnav-item" data-tab="placeTab" onclick="showTab('placeTab')">
+      <div class="bnav-icon active">📍</div>
+      <div class="bnav-label active">今日どこ行く？</div>
+      <div class="bnav-dot"></div>
+    </div>
+    <div class="bnav-item" data-tab="planTab" onclick="showTab('planTab')">
+      <div class="bnav-icon">📅</div>
+      <div class="bnav-label">お出かけ予定</div>
+      <div class="bnav-dot" style="display:none;"></div>
+    </div>
+    <div class="bnav-item" data-tab="moodTab" onclick="showTab('moodTab')">
+      <div class="bnav-icon">😊</div>
+      <div class="bnav-label">今日の気分</div>
+      <div class="bnav-dot" style="display:none;"></div>
+    </div>
+  </nav>
 
   <!-- ★ 気分タブ -->
   <div id="moodTab" class="tab-content">
@@ -1150,11 +1189,18 @@ let currentPlace = "";
 
 /* ★ タブ切替 */
 function showTab(tabId, btn){
-  _currentTab = tabId; // 現在のタブを記録
+  _currentTab = tabId;
   document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
   document.getElementById(tabId).style.display = 'block';
-  btn.classList.add('active');
+
+  // ★ ボトムナビのアクティブ状態を更新
+  document.querySelectorAll('.bnav-item').forEach(item => {
+    const isActive = item.dataset.tab === tabId;
+    item.querySelector('.bnav-icon').classList.toggle('active', isActive);
+    item.querySelector('.bnav-label').classList.toggle('active', isActive);
+    const dot = item.querySelector('.bnav-dot');
+    if (dot) dot.style.display = isActive ? 'block' : 'none';
+  });
 
 
   if (tabId === "placeTab") {
@@ -1509,8 +1555,15 @@ async function _initApp(){
   const notice = document.getElementById("loadingNotice");
   if (notice) notice.style.display = "none";
 
-  // placeTabを初期表示
+  // placeTabを初期表示（ボトムナビのアクティブ状態も設定）
   document.getElementById("placeTab").style.display = "block";
+  document.querySelectorAll('.bnav-item').forEach(item => {
+    const isActive = item.dataset.tab === "placeTab";
+    item.querySelector('.bnav-icon').classList.toggle('active', isActive);
+    item.querySelector('.bnav-label').classList.toggle('active', isActive);
+    const dot = item.querySelector('.bnav-dot');
+    if (dot) dot.style.display = isActive ? 'block' : 'none';
+  });
 
   // ★ データ取得中は「更新中」を表示（タイトルだけ出て止まる問題を解消）
   showLoading();
